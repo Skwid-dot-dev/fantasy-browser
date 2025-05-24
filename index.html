@@ -14,33 +14,166 @@
 
         body {
             font-family: 'Georgia', serif;
-            background: linear-gradient(135deg, #2c3e50, #34495e);
+            background: #1a1a1a;
             color: #ecf0f1;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         .game-container {
-            display: flex;
-            height: 100vh;
-        }
-
-        .sidebar {
-            width: 320px;
-            background: rgba(44, 62, 80, 0.95);
-            border-right: 3px solid #f39c12;
-            padding: 20px;
-            overflow-y: auto;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
-        }
-
-        .map-container {
-            flex: 1;
             position: relative;
+            height: 100vh;
+            width: 100vw;
         }
 
         #map {
-            height: 100%;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
+            z-index: 1;
+        }
+
+        /* Floating UI Panels */
+        .ui-panel {
+            position: absolute;
+            background: rgba(44, 62, 80, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid #f39c12;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .ui-panel.collapsed {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .ui-panel:hover {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Character Panel - Top Left */
+        .character-panel {
+            top: 20px;
+            left: 20px;
+            width: 280px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Travel Status - Top Right */
+        .travel-status {
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(46, 204, 113, 0.95);
+            border-color: #2ecc71;
+            display: none;
+        }
+
+        /* Event Log - Bottom Left */
+        .event-log {
+            bottom: 20px;
+            left: 20px;
+            width: 320px;
+            max-height: 250px;
+            background: rgba(142, 68, 173, 0.95);
+            border-color: #9b59b6;
+        }
+
+        /* Instructions Panel - Bottom Right */
+        .instructions {
+            bottom: 20px;
+            right: 20px;
+            width: 280px;
+            background: rgba(52, 152, 219, 0.95);
+            border-color: #3498db;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .ui-panel {
+                position: fixed;
+                max-width: calc(100vw - 40px);
+                font-size: 0.9em;
+            }
+
+            .character-panel {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                max-height: 200px;
+            }
+
+            .travel-status {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+            }
+
+            .event-log {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                max-height: 150px;
+            }
+
+            .instructions {
+                bottom: 170px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+            }
+        }
+
+        /* Collapsible Panel Headers */
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .panel-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f39c12;
+        }
+
+        .collapse-btn {
+            background: none;
+            border: none;
+            color: #f39c12;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        .collapse-btn:hover {
+            background: rgba(243, 156, 18, 0.2);
+        }
+
+        .panel-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .panel-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+            margin: 0;
         }
 
         .character-panel {
@@ -48,11 +181,11 @@
             border: 2px solid #f39c12;
             border-radius: 10px;
             padding: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .character-name {
-            font-size: 1.4em;
+            font-size: 1.3em;
             color: #f39c12;
             text-align: center;
             margin-bottom: 10px;
@@ -62,10 +195,11 @@
         .stat-row {
             display: flex;
             justify-content: space-between;
-            margin: 8px 0;
-            padding: 5px;
+            margin: 6px 0;
+            padding: 4px 8px;
             background: rgba(0,0,0,0.2);
             border-radius: 5px;
+            font-size: 0.9em;
         }
 
         .stat-label {
@@ -299,8 +433,15 @@
     </div>
 
     <div class="game-container" id="gameContainer" style="display: none;">
-        <div class="sidebar">
-            <div class="character-panel">
+        <div id="map"></div>
+        
+        <!-- Character Panel - Top Left -->
+        <div class="ui-panel character-panel">
+            <div class="panel-header" onclick="togglePanel(this)">
+                <div class="panel-title">⚔️ Character</div>
+                <button class="collapse-btn">−</button>
+            </div>
+            <div class="panel-content">
                 <div class="character-name" id="characterName">Adventurer</div>
                 <div class="stat-row">
                     <span class="stat-label">🏃 Speed:</span>
@@ -323,31 +464,43 @@
                     <span class="stat-value" id="goldStat">50</span>
                 </div>
             </div>
+        </div>
 
-            <div class="instructions">
-                <h4>🗺️ How to Play:</h4>
-                <p>Click anywhere on the map to set your destination. Your character will travel there, encountering various events along the way!</p>
+        <!-- Travel Status - Top Right -->
+        <div class="ui-panel travel-status" id="travelStatus" style="display: none;">
+            <div class="panel-header" onclick="togglePanel(this)">
+                <div class="panel-title">🚶 Journey</div>
+                <button class="collapse-btn">−</button>
             </div>
-
-            <div class="travel-status" id="travelStatus" style="display: none;">
-                <h3>🚶 Traveling...</h3>
+            <div class="panel-content">
                 <div id="travelInfo">Ready to adventure!</div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
-                <button class="choice-btn" onclick="cancelTravel()" style="margin-top: 10px;">Cancel Journey</button>
-            </div>
-
-            <div class="event-log">
-                <h3>📜 Adventure Log</h3>
-                <div id="eventLogContent">
-                    <div class="event-entry">Welcome to the mystical realm! Click on the map to begin your journey.</div>
-                </div>
+                <button class="choice-btn" onclick="cancelTravel()" style="margin-top: 8px; padding: 8px 16px; font-size: 0.9em;">Cancel Journey</button>
             </div>
         </div>
 
-        <div class="map-container">
-            <div id="map"></div>
+        <!-- Instructions - Bottom Right -->
+        <div class="ui-panel instructions">
+            <div class="panel-header" onclick="togglePanel(this)">
+                <div class="panel-title">🗺️ Controls</div>
+                <button class="collapse-btn">−</button>
+            </div>
+            <div class="panel-content">
+                <p>Click anywhere on the map to set your destination. Your character will travel there, encountering various events along the way!</p>
+            </div>
+        </div>
+
+        <!-- Event Log - Bottom Left -->
+        <div class="ui-panel event-log">
+            <div class="panel-header" onclick="togglePanel(this)">
+                <div class="panel-title">📜 Adventure Log</div>
+                <button class="collapse-btn">−</button>
+            </div>
+            <div class="panel-content" id="eventLogContent">
+                <div class="event-entry">Welcome to the mystical realm! Click on the map to begin your journey.</div>
+            </div>
         </div>
     </div>
 
@@ -452,9 +605,33 @@
             }
         ];
 
+        // Toggle panel collapse
+        window.togglePanel = function(header) {
+            const content = header.nextElementSibling;
+            const button = header.querySelector('.collapse-btn');
+            const panel = header.parentElement;
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                button.textContent = '−';
+                panel.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                button.textContent = '+';
+                panel.classList.add('collapsed');
+            }
+        };
+
         // Initialize map
         function initMap() {
-            gameState.map = L.map('map').setView(gameState.currentPosition, 10);
+            gameState.map = L.map('map', {
+                zoomControl: false // Remove default zoom controls
+            }).setView(gameState.currentPosition, 10);
+            
+            // Add zoom control to bottom right
+            L.control.zoom({
+                position: 'bottomleft'
+            }).addTo(gameState.map);
             
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
