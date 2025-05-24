@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Map Explorer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: #ecf0f1;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: rgba(44, 62, 80, 0.95);
+            border-right: 3px solid #f39c12;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .character-panel {
+            background: rgba(52, 73, 94, 0.9);
+            border: 2px solid #f39c12;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .character-name {
+            font-size: 1.4em;
+            color: #f39c12;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #bdc3c7;
+        }
+
+        .stat-value {
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        .travel-status {
+            background: rgba(46, 204, 113, 0.2);
+            border: 2px solid #2ecc71;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .travel-status h3 {
+            color: #2ecc71;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .event-log {
+            background: rgba(142, 68, 173, 0.2);
+            border: 2px solid #9b59b6;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .event-log h3 {
+            color: #9b59b6;
+            margin-bottom: 10px;
+        }
+
+        .event-entry {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 0.9em;
+            border-left: 3px solid #9b59b6;
+        }
+
+        .event-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .event-content {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border: 3px solid #f39c12;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .event-title {
+            font-size: 1.6em;
+            color: #f39c12;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .event-description {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: #ecf0f1;
+        }
+
+        .event-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .choice-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .choice-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .login-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border: 3px solid #f39c12;
+            border-radius: 15px;
+            padding: 30px;
+            z-index: 10001;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .login-panel h2 {
+            color: #f39c12;
+            margin-bottom: 20px;
+        }
+
+        .login-panel input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #34495e;
+            border-radius: 5px;
+            background: rgba(52, 73, 94, 0.5);
+            color: #ecf0f1;
+            font-size: 1em;
+        }
+
+        .login-panel input:focus {
+            outline: none;
+            border-color: #f39c12;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            transform: translateY(-2px);
+        }
+
+        .character-marker {
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #f39c12, #e67e22);
+            border: 3px solid #2c3e50;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(243, 156, 18, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 15px rgba(243, 156, 18, 0.8); }
+            50% { box-shadow: 0 0 25px rgba(243, 156, 18, 1); }
+            100% { box-shadow: 0 0 15px rgba(243, 156, 18, 0.8); }
+        }
+
+        .destination-marker {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #e74c3c, #c0392b);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .instructions {
+            background: rgba(52, 152, 219, 0.2);
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .instructions h4 {
+            color: #3498db;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-panel" id="loginPanel">
+        <h2>🗡️ Enter the Realm 🗡️</h2>
+        <input type="text" id="usernameInput" placeholder="Enter your adventurer name" maxlength="20">
+        <br>
+        <button class="login-btn" onclick="createCharacter()">Begin Adventure</button>
+        <button class="login-btn" onclick="loadCharacter()">Continue Journey</button>
+    </div>
+
+    <div class="game-container" id="gameContainer" style="display: none;">
+        <div class="sidebar">
+            <div class="character-panel">
+                <div class="character-name" id="characterName">Adventurer</div>
+                <div class="stat-row">
+                    <span class="stat-label">🏃 Speed:</span>
+                    <span class="stat-value" id="speedStat">10</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">⚔️ Combat:</span>
+                    <span class="stat-value" id="combatStat">10</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🧙 Magic:</span>
+                    <span class="stat-value" id="magicStat">10</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🍀 Luck:</span>
+                    <span class="stat-value" id="luckStat">10</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">💰 Gold:</span>
+                    <span class="stat-value" id="goldStat">50</span>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h4>🗺️ How to Play:</h4>
+                <p>Click anywhere on the map to set your destination. Your character will travel there, encountering various events along the way!</p>
+            </div>
+
+            <div class="travel-status" id="travelStatus" style="display: none;">
+                <h3>🚶 Traveling...</h3>
+                <div id="travelInfo">Ready to adventure!</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <button class="choice-btn" onclick="cancelTravel()" style="margin-top: 10px;">Cancel Journey</button>
+            </div>
+
+            <div class="event-log">
+                <h3>📜 Adventure Log</h3>
+                <div id="eventLogContent">
+                    <div class="event-entry">Welcome to the mystical realm! Click on the map to begin your journey.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div class="event-modal" id="eventModal">
+        <div class="event-content">
+            <div class="event-title" id="eventTitle">Random Encounter</div>
+            <div class="event-description" id="eventDescription">Something interesting happens...</div>
+            <div class="event-choices" id="eventChoices"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module">
+        // Firebase Configuration (Mock implementation for demo)
+        class MockFirebase {
+            constructor() {
+                this.data = JSON.parse(localStorage.getItem('gameData') || '{}');
+            }
+
+            async saveCharacter(username, character) {
+                this.data[username] = character;
+                localStorage.setItem('gameData', JSON.stringify(this.data));
+                return true;
+            }
+
+            async loadCharacter(username) {
+                return this.data[username] || null;
+            }
+
+            async logEvent(username, event) {
+                if (!this.data[username]) return;
+                if (!this.data[username].eventLog) this.data[username].eventLog = [];
+                this.data[username].eventLog.push({
+                    timestamp: Date.now(),
+                    event: event
+                });
+                localStorage.setItem('gameData', JSON.stringify(this.data));
+            }
+        }
+
+        const firebase = new MockFirebase();
+
+        // Game State
+        let gameState = {
+            currentUser: null,
+            character: null,
+            map: null,
+            currentPosition: [51.505, -0.09], // London default
+            destination: null,
+            isMoving: false,
+            moveInterval: null,
+            characterMarker: null,
+            destinationMarker: null
+        };
+
+        // Event Templates
+        const eventTemplates = [
+            {
+                title: "Bandit Ambush!",
+                description: "A group of bandits blocks your path, demanding your gold!",
+                choices: [
+                    { text: "Fight them! (Combat)", stat: 'combat', success: "You defeat the bandits and find 20 gold!", fail: "You barely escape, losing 10 gold.", reward: 20, penalty: -10 },
+                    { text: "Try to sneak past (Luck)", stat: 'luck', success: "You slip by unnoticed!", fail: "They spot you and you lose 5 gold in the scuffle.", reward: 0, penalty: -5 },
+                    { text: "Pay them off", stat: null, success: "They let you pass for 15 gold.", fail: "", reward: 0, penalty: -15 }
+                ]
+            },
+            {
+                title: "Mystical Shrine",
+                description: "You discover an ancient shrine glowing with magical energy.",
+                choices: [
+                    { text: "Touch the shrine (Magic)", stat: 'magic', success: "The shrine blesses you! +2 Magic permanently!", fail: "The magic backfires, draining your energy.", reward: 0, penalty: 0, statBonus: { magic: 2 } },
+                    { text: "Search around it (Luck)", stat: 'luck', success: "You find a hidden cache with 30 gold!", fail: "You find nothing of value.", reward: 30, penalty: 0 },
+                    { text: "Leave it alone", stat: null, success: "You continue your journey safely.", fail: "", reward: 0, penalty: 0 }
+                ]
+            },
+            {
+                title: "Traveling Merchant",
+                description: "A friendly merchant offers to trade with you.",
+                choices: [
+                    { text: "Buy speed boots (30 gold)", stat: null, success: "Your speed increases by 3!", fail: "", reward: 0, penalty: -30, statBonus: { speed: 3 }, goldCost: 30 },
+                    { text: "Buy lucky charm (25 gold)", stat: null, success: "Your luck increases by 2!", fail: "", reward: 0, penalty: -25, statBonus: { luck: 2 }, goldCost: 25 },
+                    { text: "Just chat", stat: null, success: "The merchant shares wisdom about the road ahead.", fail: "", reward: 0, penalty: 0 }
+                ]
+            },
+            {
+                title: "Wild Storm",
+                description: "Dark clouds gather and a fierce storm begins!",
+                choices: [
+                    { text: "Push through (Speed)", stat: 'speed', success: "You outrun the storm!", fail: "You get caught in the rain and feel sluggish.", reward: 0, penalty: 0 },
+                    { text: "Seek shelter (Luck)", stat: 'luck', success: "You find a cozy inn and rest well!", fail: "You huddle under a tree, getting soaked.", reward: 0, penalty: 0 },
+                    { text: "Use magic protection", stat: 'magic', success: "Your magical barrier keeps you dry!", fail: "Your spell fails and you're drenched.", reward: 0, penalty: 0 }
+                ]
+            },
+            {
+                title: "Ancient Ruins",
+                description: "You stumble upon mysterious ancient ruins with strange markings.",
+                choices: [
+                    { text: "Investigate carefully", stat: 'magic', success: "You decipher ancient magic and gain power! +1 to all stats!", fail: "The ruins collapse partially, but you escape.", reward: 0, penalty: 0, statBonus: { speed: 1, combat: 1, magic: 1, luck: 1 } },
+                    { text: "Search for treasure", stat: 'luck', success: "You find an ancient coin worth 40 gold!", fail: "You trigger a trap but escape unharmed.", reward: 40, penalty: 0 },
+                    { text: "Leave immediately", stat: null, success: "You wisely avoid any potential danger.", fail: "", reward: 0, penalty: 0 }
+                ]
+            }
+        ];
+
+        // Initialize map
+        function initMap() {
+            gameState.map = L.map('map').setView(gameState.currentPosition, 10);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(gameState.map);
+
+            // Add character marker
+            const characterIcon = L.divIcon({
+                className: 'character-marker',
+                iconSize: [30, 30]
+            });
+            
+            gameState.characterMarker = L.marker(gameState.currentPosition, { icon: characterIcon })
+                .addTo(gameState.map)
+                .bindPopup("🧙‍♂️ " + gameState.character.name);
+
+            // Handle map clicks
+            gameState.map.on('click', function(e) {
+                if (!gameState.isMoving) {
+                    setDestination(e.latlng);
+                }
+            });
+        }
+
+        // Set destination and start movement
+        function setDestination(latlng) {
+            gameState.destination = [latlng.lat, latlng.lng];
+            
+            // Remove old destination marker
+            if (gameState.destinationMarker) {
+                gameState.map.removeLayer(gameState.destinationMarker);
+            }
+            
+            // Add new destination marker
+            const destIcon = L.divIcon({
+                className: 'destination-marker',
+                iconSize: [20, 20]
+            });
+            
+            gameState.destinationMarker = L.marker(gameState.destination, { icon: destIcon })
+                .addTo(gameState.map)
+                .bindPopup("🎯 Destination");
+
+            startMovement();
+        }
+
+        // Calculate distance between two points
+        function calculateDistance(pos1, pos2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (pos2[0] - pos1[0]) * Math.PI / 180;
+            const dLon = (pos2[1] - pos1[1]) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(pos1[0] * Math.PI / 180) * Math.cos(pos2[0] * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Start character movement
+        function startMovement() {
+            if (gameState.isMoving) return;
+            
+            gameState.isMoving = true;
+            document.getElementById('travelStatus').style.display = 'block';
+            
+            const totalDistance = calculateDistance(gameState.currentPosition, gameState.destination);
+            const baseSpeed = gameState.character.speed / 10; // Convert to km per step
+            let distanceTraveled = 0;
+            let eventCounter = 0;
+            
+            updateTravelInfo(totalDistance, distanceTraveled);
+            
+            gameState.moveInterval = setInterval(() => {
+                // Move towards destination
+                const remainingDistance = totalDistance - distanceTraveled;
+                const stepDistance = Math.min(baseSpeed, remainingDistance);
+                
+                // Calculate new position
+                const progress = (distanceTraveled + stepDistance) / totalDistance;
+                const newLat = gameState.currentPosition[0] + (gameState.destination[0] - gameState.currentPosition[0]) * progress;
+                const newLng = gameState.currentPosition[1] + (gameState.destination[1] - gameState.currentPosition[1]) * progress;
+                
+                gameState.characterMarker.setLatLng([newLat, newLng]);
+                distanceTraveled += stepDistance;
+                
+                updateTravelInfo(totalDistance, distanceTraveled);
+                
+                // Check for events (roughly every 5km or 20% progress)
+                eventCounter++;
+                if (eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
+                    eventCounter = 0;
+                    pauseMovement();
+                    triggerRandomEvent();
+                    return;
+                }
+                
+                // Check if destination reached
+                if (distanceTraveled >= totalDistance) {
+                    completeMovement();
+                }
+            }, 1000);
+        }
+
+        // Update travel information display
+        function updateTravelInfo(totalDistance, distanceTraveled) {
+            const progress = (distanceTraveled / totalDistance) * 100;
+            document.getElementById('travelInfo').textContent = 
+                `Distance: ${distanceTraveled.toFixed(1)}/${totalDistance.toFixed(1)} km`;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        // Pause movement (for events)
+        function pauseMovement() {
+            if (gameState.moveInterval) {
+                clearInterval(gameState.moveInterval);
+                gameState.moveInterval = null;
+            }
+        }
+
+        // Resume movement after event
+        function resumeMovement() {
+            if (gameState.isMoving && !gameState.moveInterval) {
+                startMovement();
+            }
+        }
+
+        // Complete movement
+        function completeMovement() {
+            gameState.isMoving = false;
+            pauseMovement();
+            
+            // Update current position
+            gameState.currentPosition = [...gameState.destination];
+            gameState.destination = null;
+            
+            // Remove destination marker
+            if (gameState.destinationMarker) {
+                gameState.map.removeLayer(gameState.destinationMarker);
+                gameState.destinationMarker = null;
+            }
+            
+            document.getElementById('travelStatus').style.display = 'none';
+            addEventLog("🎯 Reached your destination! Click somewhere new to continue exploring.");
+            
+            saveCharacterData();
+        }
+
+        // Cancel travel
+        window.cancelTravel = function() {
+            gameState.isMoving = false;
+            pauseMovement();
+            
+            if (gameState.destinationMarker) {
+                gameState.map.removeLayer(gameState.destinationMarker);
+                gameState.destinationMarker = null;
+            }
+            
+            gameState.destination = null;
+            document.getElementById('travelStatus').style.display = 'none';
+            addEventLog("🛑 Journey cancelled. Ready for a new adventure!");
+        };
+
+        // Trigger random event
+        function triggerRandomEvent() {
+            const event = eventTemplates[Math.floor(Math.random() * eventTemplates.length)];
+            showEventModal(event);
+        }
+
+        // Show event modal
+        function showEventModal(event) {
+            document.getElementById('eventTitle').textContent = event.title;
+            document.getElementById('eventDescription').textContent = event.description;
+            
+            const choicesContainer = document.getElementById('eventChoices');
+            choicesContainer.innerHTML = '';
+            
+            event.choices.forEach((choice, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-btn';
+                button.textContent = choice.text;
+                button.onclick = () => handleEventChoice(event, choice);
+                choicesContainer.appendChild(button);
+            });
+            
+            document.getElementById('eventModal').style.display = 'flex';
+        }
+
+        // Handle event choice
+        function handleEventChoice(event, choice) {
+            let result = choice.success;
+            let goldChange = choice.reward || 0;
+            
+            // Check if choice requires a stat check
+            if (choice.stat) {
+                const statValue = gameState.character[choice.stat];
+                const difficulty = 10 + Math.floor(Math.random() * 10);
+                const roll = Math.floor(Math.random() * 20) + 1;
+                
+                if (roll + statValue < difficulty) {
+                    result = choice.fail || "Nothing happens.";
+                    goldChange = choice.penalty || 0;
+                }
+            } else if (choice.goldCost) {
+                if (gameState.character.gold < choice.goldCost) {
+                    result = "You don't have enough gold!";
+                    goldChange = 0;
+                } else {
+                    goldChange = -choice.goldCost;
+                }
+            }
+            
+            // Apply gold changes
+            if (goldChange !== 0) {
+                gameState.character.gold = Math.max(0, gameState.character.gold + goldChange);
+                updateCharacterDisplay();
+            }
+            
+            // Apply stat bonuses
+            if (choice.statBonus && goldChange >= 0) {
+                Object.keys(choice.statBonus).forEach(stat => {
+                    gameState.character[stat] += choice.statBonus[stat];
+                });
+                updateCharacterDisplay();
+            }
+            
+            addEventLog(`⚔️ ${event.title}: ${result}`);
+            document.getElementById('eventModal').style.display = 'none';
+            
+            saveCharacterData();
+            
+            if (gameState.isMoving) {
+                resumeMovement();
+            }
+        }
+
+        // Add event to log
+        function addEventLog(message) {
+            const logContainer = document.getElementById('eventLogContent');
+            const entry = document.createElement('div');
+            entry.className = 'event-entry';
+            entry.textContent = message;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Keep only last 10 entries
+            while (logContainer.children.length > 10) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+
+        // Update character display
+        function updateCharacterDisplay() {
+            document.getElementById('characterName').textContent = gameState.character.name;
+            document.getElementById('speedStat').textContent = gameState.character.speed;
+            document.getElementById('combatStat').textContent = gameState.character.combat;
+            document.getElementById('magicStat').textContent = gameState.character.magic;
+            document.getElementById('luckStat').textContent = gameState.character.luck;
+            document.getElementById('goldStat').textContent = gameState.character.gold;
+        }
+
+        // Save character data
+        async function saveCharacterData() {
+            if (gameState.currentUser && gameState.character) {
+                gameState.character.position = gameState.currentPosition;
+                await firebase.saveCharacter(gameState.currentUser, gameState.character);
+            }
+        }
+
+        // Create new character
+        window.createCharacter = async function() {
+            const username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('Please enter a character name!');
+                return;
+            }
+            
+            gameState.currentUser = username;
+            gameState.character = {
+                name: username,
+                speed: 8 + Math.floor(Math.random() * 5),
+                combat: 8 + Math.floor(Math.random() * 5),
+                magic: 8 + Math.floor(Math.random() * 5),
+                luck: 8 + Math.floor(Math.random() * 5),
+                gold: 50,
+                position: [51.505, -0.09]
+            };
+            
+            gameState.currentPosition = gameState.character.position;
+            
+            await saveCharacterData();
+            startGame();
+        };
+
+        // Load existing character
+        window.loadCharacter = async function() {
+            const username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('Please enter your character name!');
+                return;
+            }
+            
+            const character = await firebase.loadCharacter(username);
+            if (!character) {
+                alert('Character not found! Try creating a new one.');
+                return;
+            }
+            
+            gameState.currentUser = username;
+            gameState.character = character;
+            gameState.currentPosition = character.position || [51.505, -0.09];
+            
+            startGame();
+        };
+
+        // Start the game
+        function startGame() {
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'flex';
+            
+            updateCharacterDisplay();
+            initMap();
+            
+            addEventLog(`🌟 Welcome back, ${gameState.character.name}! Your adventure continues...`);
+        }
+
+        // Initialize game on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game starts with login panel visible
+        });
+    </script>
+</body>
+</html>
