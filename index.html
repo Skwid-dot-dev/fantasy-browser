@@ -519,39 +519,42 @@
             gameState.isMoving = true;
             document.getElementById('travelStatus').style.display = 'block';
             
-            const totalDistance = calculateDistance(gameState.currentPosition, gameState.destination);
-            const baseSpeed = gameState.character.speed / 10; // Convert to km per step
-            let distanceTraveled = 0;
-            let eventCounter = 0;
+            // Store journey data in gameState for resuming
+            gameState.journeyData = {
+                startPosition: [...gameState.currentPosition],
+                totalDistance: calculateDistance(gameState.currentPosition, gameState.destination),
+                distanceTraveled: 0,
+                eventCounter: 0
+            };
             
-            updateTravelInfo(totalDistance, distanceTraveled);
+            const baseSpeed = gameState.character.speed / 10; // Convert to km per step
+            
+            updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
             
             gameState.moveInterval = setInterval(() => {
-                // Move towards destination
-                const remainingDistance = totalDistance - distanceTraveled;
-                const stepDistance = Math.min(baseSpeed, remainingDistance);
+                const stepDistance = Math.min(baseSpeed, gameState.journeyData.totalDistance - gameState.journeyData.distanceTraveled);
                 
-                // Calculate new position
-                const progress = (distanceTraveled + stepDistance) / totalDistance;
-                const newLat = gameState.currentPosition[0] + (gameState.destination[0] - gameState.currentPosition[0]) * progress;
-                const newLng = gameState.currentPosition[1] + (gameState.destination[1] - gameState.currentPosition[1]) * progress;
+                // Calculate new position based on original journey
+                const progress = (gameState.journeyData.distanceTraveled + stepDistance) / gameState.journeyData.totalDistance;
+                const newLat = gameState.journeyData.startPosition[0] + (gameState.destination[0] - gameState.journeyData.startPosition[0]) * progress;
+                const newLng = gameState.journeyData.startPosition[1] + (gameState.destination[1] - gameState.journeyData.startPosition[1]) * progress;
                 
                 gameState.characterMarker.setLatLng([newLat, newLng]);
-                distanceTraveled += stepDistance;
+                gameState.journeyData.distanceTraveled += stepDistance;
                 
-                updateTravelInfo(totalDistance, distanceTraveled);
+                updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
                 
-                // Check for events (roughly every 5km or 20% progress)
-                eventCounter++;
-                if (eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
-                    eventCounter = 0;
+                // Check for events
+                gameState.journeyData.eventCounter++;
+                if (gameState.journeyData.eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
+                    gameState.journeyData.eventCounter = 0;
                     pauseMovement();
                     triggerRandomEvent();
                     return;
                 }
                 
                 // Check if destination reached
-                if (distanceTraveled >= totalDistance) {
+                if (gameState.journeyData.distanceTraveled >= gameState.journeyData.totalDistance) {
                     completeMovement();
                 }
             }, 1000);
@@ -575,44 +578,33 @@
 
         // Resume movement after event
         function resumeMovement() {
-            if (gameState.isMoving && !gameState.moveInterval && gameState.destination) {
-                // Calculate current position and remaining distance
-                const currentPos = gameState.characterMarker.getLatLng();
-                gameState.currentPosition = [currentPos.lat, currentPos.lng];
-                
-                const totalDistance = calculateDistance(gameState.currentPosition, gameState.destination);
+            if (gameState.isMoving && !gameState.moveInterval && gameState.destination && gameState.journeyData) {
                 const baseSpeed = gameState.character.speed / 10;
-                let distanceTraveled = 0;
-                let eventCounter = 0;
-                
-                updateTravelInfo(totalDistance, distanceTraveled);
                 
                 gameState.moveInterval = setInterval(() => {
-                    // Move towards destination
-                    const remainingDistance = totalDistance - distanceTraveled;
-                    const stepDistance = Math.min(baseSpeed, remainingDistance);
+                    const stepDistance = Math.min(baseSpeed, gameState.journeyData.totalDistance - gameState.journeyData.distanceTraveled);
                     
-                    // Calculate new position
-                    const progress = (distanceTraveled + stepDistance) / totalDistance;
-                    const newLat = gameState.currentPosition[0] + (gameState.destination[0] - gameState.currentPosition[0]) * progress;
-                    const newLng = gameState.currentPosition[1] + (gameState.destination[1] - gameState.currentPosition[1]) * progress;
+                    // Calculate new position based on original journey
+                    const progress = (gameState.journeyData.distanceTraveled + stepDistance) / gameState.journeyData.totalDistance;
+                    const newLat = gameState.journeyData.startPosition[0] + (gameState.destination[0] - gameState.journeyData.startPosition[0]) * progress;
+                    const newLng = gameState.journeyData.startPosition[1] + (gameState.destination[1] - gameState.journeyData.startPosition[1]) * progress;
                     
                     gameState.characterMarker.setLatLng([newLat, newLng]);
-                    distanceTraveled += stepDistance;
+                    gameState.journeyData.distanceTraveled += stepDistance;
                     
-                    updateTravelInfo(totalDistance, distanceTraveled);
+                    updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
                     
                     // Check for events
-                    eventCounter++;
-                    if (eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
-                        eventCounter = 0;
+                    gameState.journeyData.eventCounter++;
+                    if (gameState.journeyData.eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
+                        gameState.journeyData.eventCounter = 0;
                         pauseMovement();
                         triggerRandomEvent();
                         return;
                     }
                     
                     // Check if destination reached
-                    if (distanceTraveled >= totalDistance) {
+                    if (gameState.journeyData.distanceTraveled >= gameState.journeyData.totalDistance) {
                         completeMovement();
                     }
                 }, 1000);
@@ -627,6 +619,7 @@
             // Update current position
             gameState.currentPosition = [...gameState.destination];
             gameState.destination = null;
+            gameState.journeyData = null; // Clear journey data
             
             // Remove destination marker
             if (gameState.destinationMarker) {
@@ -651,6 +644,7 @@
             }
             
             gameState.destination = null;
+            gameState.journeyData = null; // Clear journey data
             document.getElementById('travelStatus').style.display = 'none';
             addEventLog("🛑 Journey cancelled. Ready for a new adventure!");
         };
