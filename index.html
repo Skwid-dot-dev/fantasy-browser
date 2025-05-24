@@ -575,8 +575,47 @@
 
         // Resume movement after event
         function resumeMovement() {
-            if (gameState.isMoving && !gameState.moveInterval) {
-                startMovement();
+            if (gameState.isMoving && !gameState.moveInterval && gameState.destination) {
+                // Calculate current position and remaining distance
+                const currentPos = gameState.characterMarker.getLatLng();
+                gameState.currentPosition = [currentPos.lat, currentPos.lng];
+                
+                const totalDistance = calculateDistance(gameState.currentPosition, gameState.destination);
+                const baseSpeed = gameState.character.speed / 10;
+                let distanceTraveled = 0;
+                let eventCounter = 0;
+                
+                updateTravelInfo(totalDistance, distanceTraveled);
+                
+                gameState.moveInterval = setInterval(() => {
+                    // Move towards destination
+                    const remainingDistance = totalDistance - distanceTraveled;
+                    const stepDistance = Math.min(baseSpeed, remainingDistance);
+                    
+                    // Calculate new position
+                    const progress = (distanceTraveled + stepDistance) / totalDistance;
+                    const newLat = gameState.currentPosition[0] + (gameState.destination[0] - gameState.currentPosition[0]) * progress;
+                    const newLng = gameState.currentPosition[1] + (gameState.destination[1] - gameState.currentPosition[1]) * progress;
+                    
+                    gameState.characterMarker.setLatLng([newLat, newLng]);
+                    distanceTraveled += stepDistance;
+                    
+                    updateTravelInfo(totalDistance, distanceTraveled);
+                    
+                    // Check for events
+                    eventCounter++;
+                    if (eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
+                        eventCounter = 0;
+                        pauseMovement();
+                        triggerRandomEvent();
+                        return;
+                    }
+                    
+                    // Check if destination reached
+                    if (distanceTraveled >= totalDistance) {
+                        completeMovement();
+                    }
+                }, 1000);
             }
         }
 
