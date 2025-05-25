@@ -428,6 +428,14 @@
         <h2>🗡️ Enter the Realm 🗡️</h2>
         <input type="text" id="usernameInput" placeholder="Enter your adventurer name" maxlength="20">
         <br>
+        <label for="spawnLocation">Choose Starting Area:</label>
+        <select id="spawnLocation" name="spawnLocation" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+            <option value="random">Random Location</option>
+            <option value="forest">Whispering Forest</option>
+            <option value="mountains">Dragon's Peak</option>
+            <option value="coast">Serene Coastline</option>
+            <option value="london">London (Default)</option>
+        </select>
         <button class="login-btn" onclick="createCharacter()">Begin Adventure</button>
         <button class="login-btn" onclick="loadCharacter()">Continue Journey</button>
     </div>
@@ -463,6 +471,18 @@
                     <span class="stat-label">💰 Gold:</span>
                     <span class="stat-value" id="goldStat">50</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Inventory Panel - e.g., Below Character Panel -->
+        <div class="ui-panel inventory-panel" style="top: 440px; left: 20px; width: 280px; max-height: 200px;">
+            <div class="panel-header" onclick="togglePanel(this)">
+                <div class="panel-title">🎒 Inventory</div>
+                <button class="collapse-btn">−</button>
+            </div>
+            <div class="panel-content" id="inventoryContent">
+                <!-- Inventory items will be listed here -->
+                <div class="inventory-item">No items yet.</div>
             </div>
         </div>
 
@@ -601,6 +621,14 @@
                     { text: "Investigate carefully", stat: 'magic', success: "You decipher ancient magic and gain power! +1 to all stats!", fail: "The ruins collapse partially, but you escape.", reward: 0, penalty: 0, statBonus: { speed: 1, combat: 1, magic: 1, luck: 1 } },
                     { text: "Search for treasure", stat: 'luck', success: "You find an ancient coin worth 40 gold!", fail: "You trigger a trap but escape unharmed.", reward: 40, penalty: 0 },
                     { text: "Leave immediately", stat: null, success: "You wisely avoid any potential danger.", fail: "", reward: 0, penalty: 0 }
+                ]
+            },
+            {
+                title: "Forgotten Backpack",
+                description: "You find a dusty old backpack tucked away in a small alcove. It seems to have something inside.",
+                choices: [
+                    { text: "Open it carefully", stat: 'luck', success: "Inside, you find a 'Mystic Compass'!", fail: "It's empty, just cobwebs.", reward: 0, penalty: 0, item: "Mystic Compass" },
+                    { text: "Leave it, might be trapped", stat: null, success: "You decide to leave it undisturbed.", fail: "", reward: 0, penalty: 0 }
                 ]
             }
         ];
@@ -889,6 +917,26 @@
                 updateCharacterDisplay();
             }
             
+            // Apply stat bonuses
+            if (choice.statBonus && goldChange >= 0) { // Also ensure goldChange wasn't a penalty that negated the bonus condition
+                Object.keys(choice.statBonus).forEach(stat => {
+                    gameState.character[stat] += choice.statBonus[stat];
+                });
+                updateCharacterDisplay();
+            }
+
+            // Check for item grant
+            if (choice.item && result === choice.success) { // Item is granted if choice has an item and the outcome was successful
+                if (!gameState.character.inventory) { // Defensive check
+                    gameState.character.inventory = [];
+                }
+                gameState.character.inventory.push(choice.item);
+                updateInventoryDisplay(); // Update the inventory UI
+                // Add to the event log message that an item was found.
+                // The 'result' variable already holds the main success message.
+                result += ` You obtained: ${choice.item}!`; 
+            }
+            
             addEventLog(`⚔️ ${event.title}: ${result}`);
             document.getElementById('eventModal').style.display = 'none';
             
@@ -941,6 +989,29 @@
             }
             
             gameState.currentUser = username;
+            
+            const spawnChoice = document.getElementById('spawnLocation').value;
+            const spawnPoints = {
+                random: null, // Will be handled by random logic
+                forest: [51.520, -0.100], // Example coordinates
+                mountains: [51.480, -0.050], // Example coordinates
+                coast: [51.500, -0.150], // Example coordinates
+                london: [51.505, -0.09] // Default
+            };
+
+            let startPosition;
+            if (spawnChoice === "random") {
+                // Simple random within a box around London for now
+                // Lat between 51.45 and 51.55
+                // Lng between -0.14 and -0.04
+                startPosition = [
+                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
+                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
+                ];
+            } else {
+                startPosition = spawnPoints[spawnChoice];
+            }
+            
             gameState.character = {
                 name: username,
                 speed: 8 + Math.floor(Math.random() * 5),
@@ -948,7 +1019,8 @@
                 magic: 8 + Math.floor(Math.random() * 5),
                 luck: 8 + Math.floor(Math.random() * 5),
                 gold: 50,
-                position: [51.505, -0.09]
+                position: startPosition, // Use the chosen/random position
+                inventory: [] // <-- New inventory array
             };
             
             gameState.currentPosition = gameState.character.position;
@@ -972,6 +1044,10 @@
             }
             
             gameState.currentUser = username;
+            // Ensure inventory is initialized for older save formats
+            if (!character.inventory) {
+                character.inventory = [];
+            }
             gameState.character = character;
             gameState.currentPosition = character.position || [51.505, -0.09];
             
@@ -987,6 +1063,28 @@
             initMap();
             
             addEventLog(`🌟 Welcome back, ${gameState.character.name}! Your adventure continues...`);
+            updateInventoryDisplay(); // <-- Call new function
+        }
+
+        // Function to update the inventory display
+        function updateInventoryDisplay() {
+            const inventoryContent = document.getElementById('inventoryContent');
+            inventoryContent.innerHTML = ''; // Clear current display
+
+            if (gameState.character && gameState.character.inventory && gameState.character.inventory.length > 0) {
+                gameState.character.inventory.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'inventory-item';
+                    // Assuming item is a string for now. If it's an object, use item.name or similar.
+                    itemDiv.textContent = item; 
+                    inventoryContent.appendChild(itemDiv);
+                });
+            } else {
+                const noItemsDiv = document.createElement('div');
+                noItemsDiv.className = 'inventory-item';
+                noItemsDiv.textContent = 'No items yet.';
+                inventoryContent.appendChild(noItemsDiv);
+            }
         }
 
         // Initialize game on page load
