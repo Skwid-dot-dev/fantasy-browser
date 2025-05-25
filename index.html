@@ -756,7 +756,7 @@
         // Resume movement after event
         function resumeMovement() {
             if (gameState.isMoving && !gameState.moveInterval && gameState.destination && gameState.journeyData) {
-                const baseSpeed = gameState.character.speed * 10; // Convert to m per step (original speed was km/step, now m/step)
+                const baseSpeed = gameState.character.speed * 2; // Convert to m per step (original speed was km/step, now m/step)
                 
                 gameState.moveInterval = setInterval(() => {
                     const stepDistance = Math.min(baseSpeed, gameState.journeyData.totalDistance - gameState.journeyData.distanceTraveled);
