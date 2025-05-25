@@ -508,7 +508,7 @@
         <input type="text" id="usernameInput" placeholder="Enter your adventurer name" maxlength="20">
         <br>
         <label for="spawnLocationInput">Choose Starting Area:</label>
-        <input type="text" id="spawnLocationInput" placeholder="Enter desired spawn location (e.g., forest, mountains)" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+        <input type="text" id="spawnLocationInput" placeholder="e.g., forest, mountains, or a real address like 'Spartanburg SC'" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
         <button class="login-btn" onclick="createCharacter()">Begin Adventure</button>
         <button class="login-btn" onclick="loadCharacter()">Continue Journey</button>
     </div>
@@ -545,6 +545,19 @@
                 <div class="stat-row">
                     <span class="stat-label">💰 Gold:</span>
                     <span class="stat-value" id="goldStat">50</span>
+                </div>
+                <hr style="border-top: 1px solid #f39c12; margin: 10px 0;"> <!-- Visual separator -->
+                <div class="stat-row">
+                    <span class="stat-label">🌲 Woodcutting:</span>
+                    <span class="stat-value" id="woodcuttingStat">1</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">⛏️ Mining:</span>
+                    <span class="stat-value" id="miningStat">1</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🎣 Fishing:</span>
+                    <span class="stat-value" id="fishingStat">1</span>
                 </div>
             </div>
             <div id="inventoryTabContent" class="tab-content">
@@ -675,7 +688,8 @@
             isMoving: false,
             moveInterval: null,
             characterMarker: null,
-            destinationMarker: null
+            destinationMarker: null,
+            currentTerrainType: 'plains' // Default initial terrain
         };
 
         // Event Templates
@@ -746,14 +760,34 @@
                         penalty: 0,
                         action: function(character) { // Custom action for success
                             if (!character.pets) character.pets = [];
-                            // Simple naming for now, could be made more dynamic later
                             const petName = "Wolf Pup"; 
-                            character.pets.push({ 
+                            let variation = null;
+                            const rand = Math.random();
+                            if (rand < 0.05) { // 5% chance for shiny
+                                variation = 'shiny';
+                            } else if (rand < 0.10) { // Next 5% chance for ghost (0.05 to 0.0999...)
+                                variation = 'ghost';
+                            }
+
+                            const newPet = { 
                                 id: 'pet_' + Date.now(), // Simple unique ID
                                 type: "Wolf", 
-                                name: petName 
-                            });
-                            return `You named your new companion ${petName}.`; // This message can be appended to the main success message
+                                name: petName,
+                                variation: variation // Add variation property
+                            };
+                            character.pets.push(newPet);
+
+                            let variationText = "";
+                            if (newPet.variation === 'shiny') {
+                                variationText = "[Shiny] ";
+                            } else if (newPet.variation === 'ghost') {
+                                variationText = "[Ghost] ";
+                            }
+                            
+                            if (variationText) {
+                                return `A wild ${variationText}${newPet.name} has joined you!`;
+                            }
+                            return `You named your new companion ${newPet.name}.`;
                         }
                     },
                     {
@@ -763,6 +797,171 @@
                         fail: "",
                         reward: 0,
                         penalty: 0
+                    }
+                ]
+            },
+            // --- WOODCUTTING EVENTS ---
+            {
+                title: "Productive Chop",
+                description: "You find a patch of sturdy trees. A good opportunity to gather some wood.",
+                requiredTerrain: ['forest', 'woodland'],
+                choices: [
+                    { 
+                        text: "Gather basic logs (Woodcutting 1+)", 
+                        stat: 'woodcutting', 
+                        success: "You expertly chop down a tree and gather some useful Oak Logs.", 
+                        fail: "You struggle a bit, but manage to get a few usable pieces of Pine Wood.", 
+                        reward: 0, 
+                        item: "Oak Logs", // Success item
+                        failItem: "Pine Wood" // Optional: item on fail
+                    },
+                    { 
+                        text: "Search for rare Forest Blooms (Luck 5+)", 
+                        stat: 'luck', 
+                        success: "Your keen eye spots a rare Forest Bloom hidden amongst the roots!", 
+                        fail: "You find nothing but common leaves.", 
+                        reward: 0, 
+                        item: "Forest Bloom"
+                    }
+                ]
+            },
+            {
+                title: "Overgrown Trail",
+                description: "An old trail is blocked by thorny bushes. Clearing it might reveal something.",
+                requiredTerrain: ['forest', 'woodland', 'swamp'],
+                choices: [
+                    { 
+                        text: "Hack through (Woodcutting 3+)", 
+                        stat: 'woodcutting', 
+                        success: "You clear the path and find a small bundle of Yew Wood.", 
+                        fail: "The thorns are too tough, and you give up.", 
+                        reward: 0, 
+                        item: "Yew Wood" 
+                    },
+                     { 
+                        text: "Carefully search the edges (Luck 4+)", 
+                        stat: 'luck', 
+                        success: "Poking around, you find some Nightshade Berries.", 
+                        fail: "You only find more thorns.", 
+                        reward: 0, 
+                        item: "Nightshade Berries" 
+                    },
+                    { 
+                        text: "Leave it.", 
+                        stat: null, 
+                        success: "You decide it's not worth the effort.", 
+                        fail: "", 
+                        reward: 0 
+                    }
+                ]
+            },
+            // --- MINING EVENTS ---
+            {
+                title: "Ore Vein",
+                description: "You spot a promising glint in a rock face. Could be valuable ore!",
+                requiredTerrain: ['mountains', 'cave', 'rocky', 'hills'],
+                choices: [
+                    { 
+                        text: "Mine for Iron Ore (Mining 1+)", 
+                        stat: 'mining', 
+                        success: "Your efforts pay off! You extract a good amount of Iron Ore.", 
+                        fail: "The rock is tougher than it looks. You only get a few ore fragments.", 
+                        reward: 0, 
+                        item: "Iron Ore",
+                        failItem: "Ore Fragments"
+                    },
+                    { 
+                        text: "Look for Shiny Geodes (Luck 7+)", 
+                        stat: 'luck', 
+                        success: "Tucked away in a crevice, you find a beautiful Shiny Geode!", 
+                        fail: "No geodes here, just plain rocks.", 
+                        reward: 0, 
+                        item: "Shiny Geode" 
+                    }
+                ]
+            },
+            {
+                title: "Unstable Cavern Entrance",
+                description: "A dark cavern entrance beckons. It looks a bit unstable.",
+                requiredTerrain: ['mountains', 'cave', 'hills'],
+                choices: [
+                    { 
+                        text: "Carefully explore (Mining 4+)", 
+                        stat: 'mining', 
+                        success: "You navigate the cavern safely and find a deposit of Coal.", 
+                        fail: "A small tremor makes you retreat. Too risky.", 
+                        reward: 0, 
+                        item: "Coal" 
+                    },
+                    { 
+                        text: "Check for loose gems (Luck 6+)", 
+                        stat: 'luck', 
+                        success: "Near the entrance, you spot a few Amethyst Shards!", 
+                        fail: "It's too dark and unstable to find anything small.", 
+                        reward: 0, 
+                        item: "Amethyst Shards" 
+                    },
+                    { 
+                        text: "Best not to risk it.", 
+                        stat: null, 
+                        success: "You steer clear of the dangerous-looking cavern.", 
+                        fail: "", 
+                        reward: 0 
+                    }
+                ]
+            },
+            // --- FISHING EVENTS ---
+            {
+                title: "Quiet Fishing Spot",
+                description: "A serene spot by the water. Looks perfect for fishing.",
+                requiredTerrain: ['water', 'coastline', 'river', 'lake'],
+                choices: [
+                    { 
+                        text: "Cast your line (Fishing 1+)", 
+                        stat: 'fishing', 
+                        success: "A tug on the line! You reel in a plump River Trout.", 
+                        fail: "The fish aren't biting today. You catch nothing but seaweed.", 
+                        reward: 0, 
+                        item: "River Trout",
+                        failItem: "Seaweed"
+                    },
+                    { 
+                        text: "Look for Sunken Treasure (Luck 8+)", 
+                        stat: 'luck', 
+                        success: "You spot something shimmering beneath the water and retrieve an Old Coin!", 
+                        fail: "Just murky water and some old boots.", 
+                        reward: 0, 
+                        item: "Old Coin" 
+                    }
+                ]
+            },
+            {
+                title: "Mysterious Waters",
+                description: "The water here has an unusual color. You wonder what lurks beneath.",
+                requiredTerrain: ['water', 'swamp', 'deep_ocean', 'cave_water'],
+                choices: [
+                    { 
+                        text: "Fish with caution (Fishing 5+)", 
+                        stat: 'fishing', 
+                        success: "Against the odds, you pull out an exotic Moonfin Fish!", 
+                        fail: "Something snags your line and breaks it. You lose your bait.", 
+                        reward: 0, 
+                        item: "Moonfin Fish" 
+                    },
+                     { 
+                        text: "Dredge the bottom (Strength 5+ - Not a real stat yet, using Luck)", // Placeholder for future stat
+                        stat: 'luck', // Using luck as a proxy
+                        success: "You drag up a barnacle-covered chest containing a Waterlogged Artifact.",
+                        fail: "You only manage to stir up mud.",
+                        reward: 0,
+                        item: "Waterlogged Artifact"
+                    },
+                    { 
+                        text: "Avoid these strange waters.", 
+                        stat: null, 
+                        success: "You decide not to disturb whatever is in there.", 
+                        fail: "", 
+                        reward: 0 
                     }
                 ]
             }
@@ -991,8 +1190,28 @@
 
         // Trigger random event
         function triggerRandomEvent() {
-            const event = eventTemplates[Math.floor(Math.random() * eventTemplates.length)];
-            showEventModal(event);
+            let currentTerrain = gameState.currentTerrainType || 'plains'; // Default if undefined
+            let filteredEvents = eventTemplates.filter(event => {
+                return !event.requiredTerrain || event.requiredTerrain.length === 0 || event.requiredTerrain.includes(currentTerrain);
+            });
+
+            if (filteredEvents.length === 0) {
+                // Fallback: if no terrain-specific events found, use only generic events
+                filteredEvents = eventTemplates.filter(event => !event.requiredTerrain || event.requiredTerrain.length === 0);
+                if (filteredEvents.length === 0) {
+                     console.warn("No suitable events found for terrain:", currentTerrain, "and no generic events available.");
+                     // Optionally, trigger a very basic default event here if desired
+                     // For now, just return to avoid errors if all events somehow require terrain
+                     return; 
+                }
+            }
+            
+            if (filteredEvents.length > 0) { // Ensure there's at least one event to show
+                const event = filteredEvents[Math.floor(Math.random() * filteredEvents.length)];
+                showEventModal(event);
+            } else {
+                console.warn("No events available to trigger after filtering for terrain:", currentTerrain);
+            }
         }
 
         // Show event modal
@@ -1020,58 +1239,86 @@
             let goldChange = choice.reward || 0;
             
             // Check if choice requires a stat check
+            let successfulOutcome = true; // Assume success initially
             if (choice.stat) {
                 const statValue = gameState.character[choice.stat];
-                const difficulty = 10 + Math.floor(Math.random() * 10);
-                const roll = Math.floor(Math.random() * 20) + 1;
+                // Dynamic difficulty: base 5 + random(0-4) + (skill level / 2 for slight scaling)
+                // For non-skill stats (luck, combat), this /2 will be small or 0 if level is low.
+                // For skills like woodcutting, it allows higher levels to succeed more often.
+                const difficulty = 5 + Math.floor(Math.random() * 5) + Math.floor((statValue || 0) / 2); 
+                const roll = Math.floor(Math.random() * 20) + 1; // d20 roll
                 
-                if (roll + statValue < difficulty) {
+                // Lower roll is better for this example, or higher if you prefer (adjust difficulty logic then)
+                // Let's stick to: roll + statValue >= difficulty for success.
+                // For a more skill-centric check: if statValue itself is low, make it harder.
+                // A simple check: if stat is a skill (e.g. woodcutting) and value is 0 or undefined, treat as very hard.
+                let currentStatValue = statValue || 0;
+                if (['woodcutting', 'mining', 'fishing'].includes(choice.stat) && currentStatValue === 0) {
+                    currentStatValue = -5; // Penalize if skill is 0
+                }
+
+
+                if (roll + currentStatValue < difficulty) {
+                    successfulOutcome = false;
                     result = choice.fail || "Nothing happens.";
                     goldChange = choice.penalty || 0;
                 }
             } else if (choice.goldCost) {
                 if (gameState.character.gold < choice.goldCost) {
+                    successfulOutcome = false; // Can't afford
                     result = "You don't have enough gold!";
                     goldChange = 0;
                 } else {
-                    goldChange = -choice.goldCost;
+                    // Gold cost is handled after applying gold changes
                 }
             }
             
-            // Apply gold changes
-            if (goldChange !== 0) {
-                gameState.character.gold = Math.max(0, gameState.character.gold + goldChange);
-                updateCharacterDisplay();
+            // Apply gold changes (penalties or costs)
+            // Rewards are typically part of the item or a separate 'reward' field for successful outcomes.
+            if (choice.goldCost && successfulOutcome) { // Apply cost only if choice was possible and successful
+                 gameState.character.gold -= choice.goldCost;
+                 goldChange = 0; // Reset goldChange as it was a cost, not a penalty from failure
+            } else if (goldChange !== 0) { // This handles penalties from failed stat checks
+                 gameState.character.gold = Math.max(0, gameState.character.gold + goldChange);
             }
+             updateCharacterDisplay(); // Update display after gold changes
             
-            // Apply stat bonuses
-            if (choice.statBonus && goldChange >= 0) {
+            // Apply stat bonuses (only on success)
+            if (choice.statBonus && successfulOutcome) {
                 Object.keys(choice.statBonus).forEach(stat => {
-                    gameState.character[stat] += choice.statBonus[stat];
-                });
-                updateCharacterDisplay();
-            }
-            
-            // Apply stat bonuses
-            if (choice.statBonus && goldChange >= 0) { // Also ensure goldChange wasn't a penalty that negated the bonus condition
-                Object.keys(choice.statBonus).forEach(stat => {
-                    gameState.character[stat] += choice.statBonus[stat];
+                    gameState.character[stat] = (gameState.character[stat] || 0) + choice.statBonus[stat];
                 });
                 updateCharacterDisplay();
             }
 
             // Check for item grant
-            if (choice.item && result === choice.success) { // Item is granted if choice has an item and the outcome was successful
-                if (!gameState.character.inventory) { // Defensive check
-                    gameState.character.inventory = [];
-                }
-                gameState.character.inventory.push(choice.item);
-                updateInventoryDisplay(); // Update the inventory UI
-                // Add to the event log message that an item was found.
-                // The 'result' variable already holds the main success message.
-                result += ` You obtained: ${choice.item}!`; 
+            let itemObtained = null;
+            if (successfulOutcome && choice.item) {
+                itemObtained = choice.item;
+            } else if (!successfulOutcome && choice.failItem) {
+                itemObtained = choice.failItem;
             }
 
+            if (itemObtained) {
+                if (!gameState.character.inventory) { 
+                    gameState.character.inventory = [];
+                }
+                gameState.character.inventory.push(itemObtained);
+                updateInventoryDisplay(); 
+                // Append to result message
+                if (successfulOutcome) {
+                     result += ` You obtained: ${itemObtained}!`;
+                } else {
+                    // If there's a specific fail message, it's already set. 
+                    // If fail message is generic, append item info.
+                    if (choice.fail === "Nothing happens." || !choice.fail) {
+                         result = `You failed, but found ${itemObtained}.`;
+                    } else {
+                         result += ` You obtained: ${itemObtained}.`;
+                    }
+                }
+            }
+            
             // Handle custom action for successful choices (like acquiring a pet)
             let actionMessage = "";
             if (result === choice.success) { // Check if the outcome was the defined success message for this choice
@@ -1128,6 +1375,10 @@
             document.getElementById('magicStat').textContent = gameState.character.magic;
             document.getElementById('luckStat').textContent = gameState.character.luck;
             document.getElementById('goldStat').textContent = gameState.character.gold;
+            // Update new skill displays
+            document.getElementById('woodcuttingStat').textContent = gameState.character.woodcutting;
+            document.getElementById('miningStat').textContent = gameState.character.mining;
+            document.getElementById('fishingStat').textContent = gameState.character.fishing;
         }
 
         // Save character data
@@ -1148,44 +1399,67 @@
             
             gameState.currentUser = username;
             
-            const spawnInput = document.getElementById('spawnLocationInput').value.trim().toLowerCase();
-            // const spawnPoints = {
-            //     random: null, // Will be handled by random logic
-            //     forest: [51.520, -0.100], // Example coordinates
-            //     mountains: [51.480, -0.050], // Example coordinates
-            //     coast: [51.500, -0.150], // Example coordinates
-            //     london: [51.505, -0.09] // Default
-            // };
-
+            const spawnInputOriginal = document.getElementById('spawnLocationInput').value.trim();
+            const spawnInput = spawnInputOriginal.toLowerCase();
+            
             let startPosition;
+            let spawnMessage = "";
+            let determinedTerrain = 'plains'; // Default terrain
+
             const predefinedLocations = {
-                "london": [51.505, -0.09],
-                "whispering forest": [51.520, -0.100], // Matched to old "forest"
-                "dragon's peak": [51.480, -0.050],   // Matched to old "mountains"
-                "serene coastline": [51.500, -0.150] // Matched to old "coast"
+                "london": { coords: [51.505, -0.09], terrain: 'urban' },
+                "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
+                "dragon's peak": { coords: [51.480, -0.050], terrain: 'mountains' },
+                "serene coastline": { coords: [51.500, -0.150], terrain: 'coastline' }
             };
 
-            let spawnMessage = "";
+            const randomSpawn = () => {
+                return [
+                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
+                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
+                ];
+            };
 
             if (predefinedLocations[spawnInput]) {
-                startPosition = predefinedLocations[spawnInput];
-                spawnMessage = `Spawning you in ${document.getElementById('spawnLocationInput').value.trim()}.`;
+                startPosition = predefinedLocations[spawnInput].coords;
+                determinedTerrain = predefinedLocations[spawnInput].terrain;
+                spawnMessage = `Spawning you in ${spawnInputOriginal} (${determinedTerrain}).`;
             } else if (spawnInput === "random" || spawnInput === "") {
-                // Simple random within a box around London for now
-                startPosition = [
-                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
-                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
-                ];
-                spawnMessage = "Spawning you at a random location.";
+                startPosition = randomSpawn();
+                determinedTerrain = 'plains'; // Default for random
+                spawnMessage = "Spawning you at a random location (plains).";
             } else {
-                // Default to random if input is not recognized
-                startPosition = [
-                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
-                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
-                ];
-                spawnMessage = `Could not find "${document.getElementById('spawnLocationInput').value.trim()}". Spawning you at a random location instead.`;
+                // Try geocoding
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(spawnInputOriginal)}&limit=1`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.length > 0 && data[0].lat && data[0].lon) {
+                            startPosition = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                            // For geocoded locations, we don't have explicit terrain type yet from Nominatim.
+                            // We could try to infer based on keywords in address or default.
+                            determinedTerrain = 'plains'; // Default for geocoded for now
+                            spawnMessage = `Successfully found coordinates for '${spawnInputOriginal}'. Spawning you there (assumed plains).`;
+                        } else {
+                            startPosition = randomSpawn();
+                            determinedTerrain = 'plains';
+                            spawnMessage = `Could not find coordinates for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Internet connection is required for address lookup.`;
+                        }
+                    } else {
+                        startPosition = randomSpawn();
+                        determinedTerrain = 'plains';
+                        spawnMessage = `Error looking up '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Internet connection may be required.`;
+                    }
+                } catch (error) {
+                    console.error("Geocoding error:", error);
+                    startPosition = randomSpawn();
+                    determinedTerrain = 'plains';
+                    spawnMessage = `Error during address lookup for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Please check your internet connection.`;
+                }
             }
             
+            gameState.currentTerrainType = determinedTerrain; // Set the determined terrain
+
             gameState.character = {
                 name: username,
                 speed: 8 + Math.floor(Math.random() * 5),
@@ -1194,8 +1468,11 @@
                 luck: 8 + Math.floor(Math.random() * 5),
                 gold: 50,
                 position: startPosition, // Use the chosen/random position
-                inventory: [], // <-- New inventory array
-                pets: [] // <-- Add this line
+                inventory: [], 
+                pets: [], 
+                woodcutting: 1, // New skill
+                mining: 1,      // New skill
+                fishing: 1      // New skill
             };
             
             gameState.currentPosition = gameState.character.position;
@@ -1227,6 +1504,23 @@
             // Ensure pets array is initialized for older save formats
             if (!character.pets) {
                 character.pets = [];
+            } else {
+                // Ensure pets have the variation property for older saves
+                character.pets.forEach(pet => {
+                    if (pet.variation === undefined) {
+                        pet.variation = null;
+                    }
+                });
+            }
+            // Initialize skills if they don't exist (for older saves)
+            if (character.woodcutting === undefined) {
+                character.woodcutting = 1;
+            }
+            if (character.mining === undefined) {
+                character.mining = 1;
+            }
+            if (character.fishing === undefined) {
+                character.fishing = 1;
             }
             gameState.character = character;
             gameState.currentPosition = character.position || [51.505, -0.09];
@@ -1241,8 +1535,30 @@
             
             updateCharacterDisplay();
             initMap();
+
+            // Set currentTerrainType for loaded games
+            if (!gameState.currentTerrainType || gameState.currentTerrainType === 'plains') { // If not set or default 'plains' from global
+                // Try to infer from known locations, otherwise keep/default to 'plains'
+                const pos = gameState.currentPosition;
+                let foundKnownLocation = false;
+                for (const key in predefinedLocations) {
+                    if (predefinedLocations[key].coords[0] === pos[0] && predefinedLocations[key].coords[1] === pos[1]) {
+                        gameState.currentTerrainType = predefinedLocations[key].terrain;
+                        foundKnownLocation = true;
+                        break;
+                    }
+                }
+                if (!foundKnownLocation) {
+                     // If still not set (e.g. custom geocoded location from a previous session, or truly random)
+                    gameState.currentTerrainType = 'plains'; // Default for loaded games or unknown areas
+                }
+            }
+            // Ensure it's defined globally if it somehow wasn't
+             if (typeof gameState.currentTerrainType === 'undefined') {
+                gameState.currentTerrainType = 'plains'; 
+            }
             
-            addEventLog(`🌟 Welcome back, ${gameState.character.name}! Your adventure continues...`);
+            addEventLog(`🌟 Welcome back, ${gameState.character.name}! Your current terrain is ${gameState.currentTerrainType}. Your adventure continues...`);
             updateInventoryDisplay(); // <-- Call new function
             window.openTab('character'); // Open Character tab by default
 
@@ -1339,8 +1655,20 @@
                    } else if (pet.type.toLowerCase() === 'goblin') {
                        petIcon = '👺';
                    }
+
+                   let displayName = pet.name;
+                   petItem.style.color = ''; // Reset color
+                   petItem.style.opacity = ''; // Reset opacity
+
+                   if (pet.variation === 'shiny') {
+                       displayName = `[Shiny] ${pet.name}`;
+                       petItem.style.color = '#FFD700'; // Gold color for shiny
+                   } else if (pet.variation === 'ghost') {
+                       displayName = `[Ghost] ${pet.name}`;
+                       petItem.style.opacity = '0.7'; // Slight transparency for ghost
+                   }
                    
-                   petItem.textContent = `${petIcon} ${pet.name} (${pet.type})`;
+                   petItem.textContent = `${petIcon} ${displayName} (${pet.type})`;
                    petList.appendChild(petItem);
                });
                petsContent.appendChild(petList);
