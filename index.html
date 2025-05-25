@@ -679,7 +679,7 @@
 
         // Calculate distance between two points
         function calculateDistance(pos1, pos2) {
-            const R = 6371; // Earth's radius in km
+            const R = 6371000; // Earth's radius in m
             const dLat = (pos2[0] - pos1[0]) * Math.PI / 180;
             const dLon = (pos2[1] - pos1[1]) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -704,7 +704,7 @@
                 eventCounter: 0
             };
             
-            const baseSpeed = gameState.character.speed / 10; // Convert to km per step
+            const baseSpeed = gameState.character.speed * 100; // Convert to m per step (original speed was km/step, now m/step)
             
             updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
             
@@ -741,7 +741,7 @@
         function updateTravelInfo(totalDistance, distanceTraveled) {
             const progress = (distanceTraveled / totalDistance) * 100;
             document.getElementById('travelInfo').textContent = 
-                `Distance: ${distanceTraveled.toFixed(1)}/${totalDistance.toFixed(1)} km`;
+                `Distance: ${distanceTraveled.toFixed(0)}/${totalDistance.toFixed(0)} m`;
             document.getElementById('progressFill').style.width = progress + '%';
         }
 
@@ -756,7 +756,7 @@
         // Resume movement after event
         function resumeMovement() {
             if (gameState.isMoving && !gameState.moveInterval && gameState.destination && gameState.journeyData) {
-                const baseSpeed = gameState.character.speed / 10;
+                const baseSpeed = gameState.character.speed * 100; // Convert to m per step (original speed was km/step, now m/step)
                 
                 gameState.moveInterval = setInterval(() => {
                     const stepDistance = Math.min(baseSpeed, gameState.journeyData.totalDistance - gameState.journeyData.distanceTraveled);
