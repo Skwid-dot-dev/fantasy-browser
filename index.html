@@ -94,6 +94,85 @@
             border-color: #3498db;
         }
 
+        /* Unified UI Panel Styling */
+        .unified-ui-panel {
+            position: absolute; /* Or fixed, depending on desired behavior with map scroll */
+            top: 10px;
+            left: 10px;
+            width: 320px; /* Or desired width */
+            max-height: calc(100vh - 20px); /* Adjust based on top/bottom margin */
+            background: rgba(44, 62, 80, 0.95); /* Similar to existing panels */
+            backdrop-filter: blur(10px);
+            border: 2px solid #f39c12;
+            border-radius: 15px;
+            padding: 0; /* Padding will be handled by tab content or header */
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            z-index: 1000; /* Ensure it's above the map */
+            display: flex; /* Use flex to arrange tab bar and content */
+            flex-direction: column;
+            overflow: hidden; /* Prevent content from spilling out before scroll is implemented */
+        }
+
+        /* Tab Bar Styling */
+        .tab-bar {
+            display: flex;
+            justify-content: space-around; /* Or space-between, or flex-start */
+            align-items: center;
+            background: rgba(30, 40, 50, 0.8); /* Slightly darker or different from panel bg */
+            padding: 5px 0;
+            border-bottom: 1px solid #f39c12;
+            flex-shrink: 0; /* Prevent tab bar from shrinking */
+        }
+
+        /* Tab Button Styling */
+        .tab-button {
+            background: none;
+            border: none;
+            color: #ecf0f1;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 1.1em; /* Adjust as needed for emojis later */
+            transition: background 0.2s ease, color 0.2s ease;
+            border-radius: 5px; /* Optional: for rounded hover effect */
+        }
+
+        .tab-button:hover {
+            background: rgba(243, 156, 18, 0.2);
+            color: #f39c12;
+        }
+
+        .tab-button.active { /* Style for the active tab */
+            background: rgba(243, 156, 18, 0.3);
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        /* Tab Content Styling */
+        .tab-content {
+            display: none; /* Hidden by default, JS will show the active one */
+            padding: 15px;
+            overflow-y: auto; /* Allow scrolling for content that exceeds panel height */
+            flex-grow: 1; /* Allow content to take available space */
+            /* max-height will be implicitly handled by .unified-ui-panel's max-height and flex layout */
+        }
+
+        /* Ensure any direct children of tab-content that were previously panel-content divs reset their margins if necessary */
+        .tab-content > .panel-content {
+            margin: 0; /* Reset margin if it was part of the old .panel-content styling */
+            padding: 0; /* Reset padding if it was part of the old .panel-content styling */
+        }
+        
+        /* Styling for specific content moved from panels, if needed to override old styles */
+        #characterTabContent .stat-row { /* Example if stat-row needs adjustment in new layout */
+            /* Add specific overrides if necessary */
+        }
+        #inventoryTabContent {
+          /* Styles for inventory items might need to be checked */
+        }
+        #eventLogTabContent .event-entry {
+          /* Styles for event entries might need to be checked */
+        }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .ui-panel {
@@ -428,28 +507,24 @@
         <h2>🗡️ Enter the Realm 🗡️</h2>
         <input type="text" id="usernameInput" placeholder="Enter your adventurer name" maxlength="20">
         <br>
-        <label for="spawnLocation">Choose Starting Area:</label>
-        <select id="spawnLocation" name="spawnLocation" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
-            <option value="random">Random Location</option>
-            <option value="forest">Whispering Forest</option>
-            <option value="mountains">Dragon's Peak</option>
-            <option value="coast">Serene Coastline</option>
-            <option value="london">London (Default)</option>
-        </select>
+        <label for="spawnLocationInput">Choose Starting Area:</label>
+        <input type="text" id="spawnLocationInput" placeholder="Enter desired spawn location (e.g., forest, mountains)" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
         <button class="login-btn" onclick="createCharacter()">Begin Adventure</button>
         <button class="login-btn" onclick="loadCharacter()">Continue Journey</button>
     </div>
 
     <div class="game-container" id="gameContainer" style="display: none;">
         <div id="map"></div>
-        
-        <!-- Character Panel - Top Left -->
-        <div class="ui-panel character-panel">
-            <div class="panel-header" onclick="togglePanel(this)">
-                <div class="panel-title">⚔️ Character</div>
-                <button class="collapse-btn">−</button>
+
+        <div id="unifiedUIPanel" class="ui-panel unified-ui-panel">
+            <div class="tab-bar">
+                <button class="tab-button" data-tab="character">⚔️</button>
+                <button class="tab-button" data-tab="inventory">🎒</button>
+                <button class="tab-button" data-tab="pets">🐾</button> 
+                <button class="tab-button" data-tab="eventLog">📜</button>
+                <button class="tab-button" data-tab="instructions">🗺️</button>
             </div>
-            <div class="panel-content">
+            <div id="characterTabContent" class="tab-content">
                 <div class="character-name" id="characterName">Adventurer</div>
                 <div class="stat-row">
                     <span class="stat-label">🏃 Speed:</span>
@@ -472,17 +547,44 @@
                     <span class="stat-value" id="goldStat">50</span>
                 </div>
             </div>
+            <div id="inventoryTabContent" class="tab-content">
+                <div class="panel-content" id="inventoryContent">
+                <!-- Inventory items will be listed here -->
+                <div class="inventory-item">No items yet.</div>
+            </div>
+            </div>
+            <div id="eventLogTabContent" class="tab-content">
+                <div class="panel-content" id="eventLogContent">
+                <div class="event-entry">Welcome to the mystical realm! Click on the map to begin your journey.</div>
+            </div>
+            </div>
+            <div id="instructionsTabContent" class="tab-content">
+                <p>Click anywhere on the map to set your destination. Your character will travel there, encountering various events along the way!</p>
+            </div>
+            <div id="petsTabContent" class="tab-content">
+                <!-- Acquired pets will be listed here by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Character Panel - Top Left -->
+        <div class="ui-panel character-panel" style="display: none;">
+            <div class="panel-header" onclick="togglePanel(this)">
+                <div class="panel-title">⚔️ Character</div>
+                <button class="collapse-btn">−</button>
+            </div>
+            <div class="panel-content">
+                
+            </div>
         </div>
 
         <!-- Inventory Panel - e.g., Below Character Panel -->
-        <div class="ui-panel inventory-panel" style="top: 440px; left: 20px; width: 280px; max-height: 200px;">
+        <div class="ui-panel inventory-panel" style="top: 440px; left: 20px; width: 280px; max-height: 200px; display: none;">
             <div class="panel-header" onclick="togglePanel(this)">
                 <div class="panel-title">🎒 Inventory</div>
                 <button class="collapse-btn">−</button>
             </div>
-            <div class="panel-content" id="inventoryContent">
-                <!-- Inventory items will be listed here -->
-                <div class="inventory-item">No items yet.</div>
+            <div class="panel-content" id="inventoryContent_original">
+                
             </div>
         </div>
 
@@ -502,24 +604,24 @@
         </div>
 
         <!-- Instructions - Bottom Right -->
-        <div class="ui-panel instructions">
+        <div class="ui-panel instructions" style="display: none;">
             <div class="panel-header" onclick="togglePanel(this)">
                 <div class="panel-title">🗺️ Controls</div>
                 <button class="collapse-btn">−</button>
             </div>
             <div class="panel-content">
-                <p>Click anywhere on the map to set your destination. Your character will travel there, encountering various events along the way!</p>
+                
             </div>
         </div>
 
         <!-- Event Log - Bottom Left -->
-        <div class="ui-panel event-log">
+        <div class="ui-panel event-log" style="display: none;">
             <div class="panel-header" onclick="togglePanel(this)">
                 <div class="panel-title">📜 Adventure Log</div>
                 <button class="collapse-btn">−</button>
             </div>
-            <div class="panel-content" id="eventLogContent">
-                <div class="event-entry">Welcome to the mystical realm! Click on the map to begin your journey.</div>
+            <div class="panel-content" id="eventLogContent_original">
+                
             </div>
         </div>
     </div>
@@ -629,6 +731,39 @@
                 choices: [
                     { text: "Open it carefully", stat: 'luck', success: "Inside, you find a 'Mystic Compass'!", fail: "It's empty, just cobwebs.", reward: 0, penalty: 0, item: "Mystic Compass" },
                     { text: "Leave it, might be trapped", stat: null, success: "You decide to leave it undisturbed.", fail: "", reward: 0, penalty: 0 }
+                ]
+            },
+            {
+                title: "A Lost Creature",
+                description: "You come across a small, lost wolf pup whimpering in the bushes. It looks hungry but wary.",
+                choices: [
+                    {
+                        text: "Offer some food and try to befriend it (Luck 7+)",
+                        stat: 'luck', // Requires a luck check
+                        success: "The pup cautiously approaches and accepts your offering. It seems to trust you! You've gained a companion!",
+                        fail: "The pup gets scared and runs away into the undergrowth.",
+                        reward: 0, // No gold reward/penalty
+                        penalty: 0,
+                        action: function(character) { // Custom action for success
+                            if (!character.pets) character.pets = [];
+                            // Simple naming for now, could be made more dynamic later
+                            const petName = "Wolf Pup"; 
+                            character.pets.push({ 
+                                id: 'pet_' + Date.now(), // Simple unique ID
+                                type: "Wolf", 
+                                name: petName 
+                            });
+                            return `You named your new companion ${petName}.`; // This message can be appended to the main success message
+                        }
+                    },
+                    {
+                        text: "Leave it be.",
+                        stat: null,
+                        success: "You decide to leave the creature to its fate.",
+                        fail: "",
+                        reward: 0,
+                        penalty: 0
+                    }
                 ]
             }
         ];
@@ -936,11 +1071,34 @@
                 // The 'result' variable already holds the main success message.
                 result += ` You obtained: ${choice.item}!`; 
             }
+
+            // Handle custom action for successful choices (like acquiring a pet)
+            let actionMessage = "";
+            if (result === choice.success) { // Check if the outcome was the defined success message for this choice
+                if (typeof choice.action === 'function') {
+                    const petMessage = choice.action(gameState.character);
+                    if (petMessage) {
+                        actionMessage = " " + petMessage; // Add a space before appending
+                    }
+                }
+                // The pet should be added, now update pet display if the tab exists
+                // This function doesn't exist yet, but we're preparing for it.
+                // if (document.getElementById('petsTabContent')) { 
+                //    if (typeof updatePetDisplay === 'function') updatePetDisplay();
+                // }
+            }
+            result += actionMessage; // Append action message to the overall result
             
             addEventLog(`⚔️ ${event.title}: ${result}`);
             document.getElementById('eventModal').style.display = 'none';
             
             saveCharacterData();
+
+            // Call updatePetDisplay here after a pet might have been added.
+            // This function will be created in the next step.
+            if (typeof window.updatePetDisplay === 'function') {
+                window.updatePetDisplay();
+            }
             
             if (gameState.isMoving) {
                 resumeMovement();
@@ -990,26 +1148,42 @@
             
             gameState.currentUser = username;
             
-            const spawnChoice = document.getElementById('spawnLocation').value;
-            const spawnPoints = {
-                random: null, // Will be handled by random logic
-                forest: [51.520, -0.100], // Example coordinates
-                mountains: [51.480, -0.050], // Example coordinates
-                coast: [51.500, -0.150], // Example coordinates
-                london: [51.505, -0.09] // Default
-            };
+            const spawnInput = document.getElementById('spawnLocationInput').value.trim().toLowerCase();
+            // const spawnPoints = {
+            //     random: null, // Will be handled by random logic
+            //     forest: [51.520, -0.100], // Example coordinates
+            //     mountains: [51.480, -0.050], // Example coordinates
+            //     coast: [51.500, -0.150], // Example coordinates
+            //     london: [51.505, -0.09] // Default
+            // };
 
             let startPosition;
-            if (spawnChoice === "random") {
+            const predefinedLocations = {
+                "london": [51.505, -0.09],
+                "whispering forest": [51.520, -0.100], // Matched to old "forest"
+                "dragon's peak": [51.480, -0.050],   // Matched to old "mountains"
+                "serene coastline": [51.500, -0.150] // Matched to old "coast"
+            };
+
+            let spawnMessage = "";
+
+            if (predefinedLocations[spawnInput]) {
+                startPosition = predefinedLocations[spawnInput];
+                spawnMessage = `Spawning you in ${document.getElementById('spawnLocationInput').value.trim()}.`;
+            } else if (spawnInput === "random" || spawnInput === "") {
                 // Simple random within a box around London for now
-                // Lat between 51.45 and 51.55
-                // Lng between -0.14 and -0.04
                 startPosition = [
                     parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
                     parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
                 ];
+                spawnMessage = "Spawning you at a random location.";
             } else {
-                startPosition = spawnPoints[spawnChoice];
+                // Default to random if input is not recognized
+                startPosition = [
+                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
+                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
+                ];
+                spawnMessage = `Could not find "${document.getElementById('spawnLocationInput').value.trim()}". Spawning you at a random location instead.`;
             }
             
             gameState.character = {
@@ -1020,12 +1194,14 @@
                 luck: 8 + Math.floor(Math.random() * 5),
                 gold: 50,
                 position: startPosition, // Use the chosen/random position
-                inventory: [] // <-- New inventory array
+                inventory: [], // <-- New inventory array
+                pets: [] // <-- Add this line
             };
             
             gameState.currentPosition = gameState.character.position;
             
             await saveCharacterData();
+            addEventLog(spawnMessage); // Add spawn message to event log
             startGame();
         };
 
@@ -1048,6 +1224,10 @@
             if (!character.inventory) {
                 character.inventory = [];
             }
+            // Ensure pets array is initialized for older save formats
+            if (!character.pets) {
+                character.pets = [];
+            }
             gameState.character = character;
             gameState.currentPosition = character.position || [51.505, -0.09];
             
@@ -1064,11 +1244,18 @@
             
             addEventLog(`🌟 Welcome back, ${gameState.character.name}! Your adventure continues...`);
             updateInventoryDisplay(); // <-- Call new function
+            window.openTab('character'); // Open Character tab by default
+
+            window.updatePetDisplay(); // <-- Add this call
         }
 
         // Function to update the inventory display
         function updateInventoryDisplay() {
             const inventoryContent = document.getElementById('inventoryContent');
+            if (!inventoryContent) { // Add a guard clause in case this is called before the element is in the new tab
+                console.warn("updateInventoryDisplay called but inventoryContent not found");
+                return;
+            }
             inventoryContent.innerHTML = ''; // Clear current display
 
             if (gameState.character && gameState.character.inventory && gameState.character.inventory.length > 0) {
@@ -1090,7 +1277,77 @@
         // Initialize game on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Game starts with login panel visible
+
+            const tabButtons = document.querySelectorAll('#unifiedUIPanel .tab-button');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    window.openTab(tabName);
+                });
+            });
         });
+
+        window.openTab = function(tabBaseName) {
+           // Hide all tab content
+           const tabContents = document.querySelectorAll('#unifiedUIPanel .tab-content'); // Scope query to unified panel
+           tabContents.forEach(content => {
+               content.style.display = 'none';
+           });
+
+           // Deactivate all tab buttons
+           const tabButtons = document.querySelectorAll('#unifiedUIPanel .tab-button'); // Scope query to unified panel
+           tabButtons.forEach(button => {
+               button.classList.remove('active');
+           });
+
+           // Show the selected tab content
+           const selectedTabContentId = tabBaseName + "TabContent";
+           const selectedTabContent = document.getElementById(selectedTabContentId);
+           if (selectedTabContent) {
+               selectedTabContent.style.display = 'block';
+           }
+
+           // Activate the selected tab button
+           const activeButton = document.querySelector(`.tab-button[data-tab='${tabBaseName}']`);
+           if (activeButton) {
+               activeButton.classList.add('active');
+           }
+       }
+
+       window.updatePetDisplay = function() {
+           const petsContent = document.getElementById('petsTabContent');
+           if (!petsContent) return; // Exit if the pets tab content area isn't found
+
+           petsContent.innerHTML = ''; // Clear previous pet list
+
+           if (gameState.character && gameState.character.pets && gameState.character.pets.length > 0) {
+               const petList = document.createElement('ul');
+               petList.style.listStyleType = 'none'; // Optional: remove bullets
+               petList.style.padding = '0';
+
+               gameState.character.pets.forEach(pet => {
+                   const petItem = document.createElement('li');
+                   petItem.style.padding = '5px 0';
+                   petItem.style.borderBottom = '1px solid #444'; // Optional: separator
+
+                   // Display pet icon based on type (simple emojis for now)
+                   let petIcon = '❓'; // Default icon
+                   if (pet.type.toLowerCase() === 'wolf') {
+                       petIcon = '🐺';
+                   } else if (pet.type.toLowerCase() === 'bear') {
+                       petIcon = '🐻';
+                   } else if (pet.type.toLowerCase() === 'goblin') {
+                       petIcon = '👺';
+                   }
+                   
+                   petItem.textContent = `${petIcon} ${pet.name} (${pet.type})`;
+                   petList.appendChild(petItem);
+               });
+               petsContent.appendChild(petList);
+           } else {
+               petsContent.innerHTML = '<p>No loyal companions by your side... yet!</p>';
+           }
+       }
     </script>
 </body>
 </html>
