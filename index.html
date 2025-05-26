@@ -505,12 +505,17 @@
 <body>
     <div class="login-panel" id="loginPanel">
         <h2>🗡️ Enter the Realm 🗡️</h2>
-        <input type="text" id="usernameInput" placeholder="Enter your adventurer name" maxlength="20">
-        <br>
-        <label for="spawnLocationInput">Choose Starting Area:</label>
-        <input type="text" id="spawnLocationInput" placeholder="e.g., forest, mountains, or a real address like 'Spartanburg SC'" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
-        <button class="login-btn" onclick="createCharacter()">Begin Adventure</button>
-        <button class="login-btn" onclick="loadCharacter()">Continue Journey</button>
+
+        <!-- Fields for Both Login & Registration -->
+        <input type="email" id="emailInput" placeholder="Email" required>
+        <input type="password" id="passwordInput" placeholder="Password" required>
+
+        <!-- Fields for Registration Only -->
+        <input type="text" id="usernameInput" placeholder="Username (for new account)" maxlength="20">
+        <input type="text" id="spawnLocationInput" placeholder="Home Town (for new account)" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+        
+        <button class="login-btn" onclick="loginUser()">Login</button>
+        <button class="login-btn" onclick="registerUser()">Register</button>
     </div>
 
     <div class="game-container" id="gameContainer" style="display: none;">
@@ -523,6 +528,7 @@
                 <button class="tab-button" data-tab="pets">🐾</button> 
                 <button class="tab-button" data-tab="eventLog">📜</button>
                 <button class="tab-button" data-tab="instructions">🗺️</button>
+                <button class="tab-button" onclick="window.logoutCharacter()">🚪</button>
             </div>
             <div id="characterTabContent" class="tab-content">
                 <div class="character-name" id="characterName">Adventurer</div>
@@ -649,34 +655,96 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module">
-        // Firebase Configuration (Mock implementation for demo)
-        class MockFirebase {
-            constructor() {
-                this.data = JSON.parse(localStorage.getItem('gameData') || '{}');
-            }
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+      import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-            async saveCharacter(username, character) {
-                this.data[username] = character;
-                localStorage.setItem('gameData', JSON.stringify(this.data));
-                return true;
-            }
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      const firebaseConfig = {
+        apiKey: "AIzaSyDFuK9Tf89hwAG7L_is8NY00kn-Y44E8Qg",
+        authDomain: "fantasy-browser-5de23.firebaseapp.com",
+        projectId: "fantasy-browser-5de23",
+        storageBucket: "fantasy-browser-5de23.firebasestorage.app",
+        messagingSenderId: "976083957249",
+        appId: "1:976083957249:web:720073a57c62074df0b200",
+        measurementId: "G-SYQLZKXBRG"
+      };
 
-            async loadCharacter(username) {
-                return this.data[username] || null;
-            }
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
 
-            async logEvent(username, event) {
-                if (!this.data[username]) return;
-                if (!this.data[username].eventLog) this.data[username].eventLog = [];
-                this.data[username].eventLog.push({
-                    timestamp: Date.now(),
-                    event: event
-                });
-                localStorage.setItem('gameData', JSON.stringify(this.data));
+      // Make them accessible globally if needed by other parts of your script
+      window.auth = auth;
+      window.db = db;
+      window.firebase = {
+          saveCharacter: async (characterData) => { // Removed username parameter
+              if (!window.auth.currentUser) {
+                  console.error("User not logged in. Cannot save character.");
+                  alert("Error: You are not logged in. Cannot save character.");
+                  return Promise.reject("User not logged in");
+              }
+              const uid = window.auth.currentUser.uid;
+              const userDocRef = doc(db, "characters", uid); // Use UID for document ID
+              try {
+                  await setDoc(userDocRef, characterData);
+                  console.log("Character saved for UID:", uid);
+                  return true;
+              } catch (error) {
+                  console.error("Error saving character for UID:", uid, error);
+                  alert("Error saving character data: " + error.message);
+                  return Promise.reject(error);
+              }
+          },
+          loadCharacter: async () => { // Removed username parameter
+              if (!window.auth.currentUser) {
+                  console.error("User not logged in. Cannot load character.");
+                  // No alert here, as this might be called speculatively.
+                  // The calling function (window.loadCharacter) will handle user feedback.
+                  return Promise.resolve(null); // Resolve with null if not logged in
+              }
+              const uid = window.auth.currentUser.uid;
+              const userDocRef = doc(db, "characters", uid); // Use UID for document ID
+              try {
+                  const docSnap = await getDoc(userDocRef);
+                  if (docSnap.exists()) {
+                      console.log("Character data loaded for UID:", uid);
+                      return docSnap.data();
+                  } else {
+                      console.log("No character document found for UID:", uid);
+                      return null;
+                  }
+              } catch (error) {
+                  console.error("Error loading character for UID:", uid, error);
+                  alert("Error loading character data: " + error.message);
+                  return Promise.resolve(null); // Resolve with null on error
+              }
+          },
+          logEvent: async (event) => { // Username parameter removed, assumes UID from auth.currentUser
+            if (!window.auth.currentUser) {
+                console.warn("Event log attempted without logged in user.");
+                return;
             }
-        }
+            const uid = window.auth.currentUser.uid;
+            // This function is not fully implemented to save to Firestore yet.
+            // You might want to save events to a subcollection in the character's document.
+            console.log("Event logged for UID (locally, not to Firestore yet):", uid, event);
+          }
+      };
 
-        const firebase = new MockFirebase();
+    </script>
+    <script type="module">
+        // IMPORTANT DEVELOPMENT NOTE:
+        // The current authentication uses a fixed password ("password123") and derives
+        // the email from the username (username + "@example.com").
+        // This is INSECURE and for DEVELOPMENT TESTING ONLY.
+        // For a production system, you MUST implement proper password handling and
+        // ideally use real email addresses for account creation and recovery.
 
         // Game State
         let gameState = {
@@ -1383,164 +1451,269 @@
 
         // Save character data
         async function saveCharacterData() {
-            if (gameState.currentUser && gameState.character) {
+            if (window.auth.currentUser && gameState.character) {
                 gameState.character.position = gameState.currentPosition;
-                await firebase.saveCharacter(gameState.currentUser, gameState.character);
+                await window.firebase.saveCharacter(gameState.character);
+            } else {
+                console.warn("saveCharacterData: No current user or character data to save.");
             }
         }
 
-        // Create new character
-        window.createCharacter = async function() {
+        // Register New User and Character
+        window.registerUser = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value.trim();
             const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                alert('Please enter a character name!');
+            const homeTown = document.getElementById('spawnLocationInput').value.trim();
+
+            if (!email || !password || !username || !homeTown) {
+                alert('All fields (Email, Password, Username, Home Town) are required for registration!');
                 return;
             }
-            
-            gameState.currentUser = username;
-            
-            const spawnInputOriginal = document.getElementById('spawnLocationInput').value.trim();
-            const spawnInput = spawnInputOriginal.toLowerCase();
-            
-            let startPosition;
-            let spawnMessage = "";
-            let determinedTerrain = 'plains'; // Default terrain
 
-            const predefinedLocations = {
-                "london": { coords: [51.505, -0.09], terrain: 'urban' },
-                "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
-                "dragon's peak": { coords: [51.480, -0.050], terrain: 'mountains' },
-                "serene coastline": { coords: [51.500, -0.150], terrain: 'coastline' }
-            };
+            try {
+                const userCredential = await createUserWithEmailAndPassword(window.auth, email, password);
+                gameState.currentUser = userCredential.user.uid; // Set UID
+                console.log("User account created with UID:", gameState.currentUser, "Email:", email);
 
-            const randomSpawn = () => {
-                return [
-                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
-                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
-                ];
-            };
+                // Geocoding and terrain determination logic (adapted from old createCharacter)
+                const homeTownLower = homeTown.toLowerCase();
+                let startPosition;
+                let spawnMessage = "";
+                let determinedTerrain = 'plains'; // Default terrain
 
-            if (predefinedLocations[spawnInput]) {
-                startPosition = predefinedLocations[spawnInput].coords;
-                determinedTerrain = predefinedLocations[spawnInput].terrain;
-                spawnMessage = `Spawning you in ${spawnInputOriginal} (${determinedTerrain}).`;
-            } else if (spawnInput === "random" || spawnInput === "") {
-                startPosition = randomSpawn();
-                determinedTerrain = 'plains'; // Default for random
-                spawnMessage = "Spawning you at a random location (plains).";
-            } else {
-                // Try geocoding
-                try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(spawnInputOriginal)}&limit=1`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data && data.length > 0 && data[0].lat && data[0].lon) {
-                            startPosition = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                            // For geocoded locations, we don't have explicit terrain type yet from Nominatim.
-                            // We could try to infer based on keywords in address or default.
-                            determinedTerrain = 'plains'; // Default for geocoded for now
-                            spawnMessage = `Successfully found coordinates for '${spawnInputOriginal}'. Spawning you there (assumed plains).`;
+                const predefinedLocations = {
+                    "london": { coords: [51.505, -0.09], terrain: 'urban' },
+                    "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
+                    "dragon's peak": { coords: [51.480, -0.050], terrain: 'mountains' },
+                    "serene coastline": { coords: [51.500, -0.150], terrain: 'coastline' }
+                    // Add more predefined locations as desired
+                };
+
+                const randomSpawn = () => {
+                    return [
+                        parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)), // Near London for example
+                        parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
+                    ];
+                };
+
+                if (predefinedLocations[homeTownLower]) {
+                    startPosition = predefinedLocations[homeTownLower].coords;
+                    determinedTerrain = predefinedLocations[homeTownLower].terrain;
+                    spawnMessage = `Spawning you in the mystical land of ${homeTown} (${determinedTerrain}).`;
+                } else if (homeTownLower === "random") {
+                    startPosition = randomSpawn();
+                    determinedTerrain = 'plains'; // Default for random
+                    spawnMessage = "Spawning you at a random location (plains).";
+                } else {
+                    // Try geocoding with Nominatim
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(homeTown)}&limit=1`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && data.length > 0 && data[0].lat && data[0].lon) {
+                                startPosition = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                                // Basic terrain inference (can be expanded)
+                                if (data[0].display_name.toLowerCase().includes("forest") || data[0].display_name.toLowerCase().includes("wood")) {
+                                    determinedTerrain = 'forest';
+                                } else if (data[0].display_name.toLowerCase().includes("mountain") || data[0].display_name.toLowerCase().includes("peak")) {
+                                    determinedTerrain = 'mountains';
+                                } else {
+                                    determinedTerrain = 'plains'; // Default for geocoded
+                                }
+                                spawnMessage = `Successfully found coordinates for '${homeTown}'. Spawning you there (terrain: ${determinedTerrain}).`;
+                            } else {
+                                startPosition = randomSpawn();
+                                determinedTerrain = 'plains';
+                                spawnMessage = `Could not find coordinates for '${homeTown}'. Spawning you at a random location (plains) instead.`;
+                            }
                         } else {
                             startPosition = randomSpawn();
                             determinedTerrain = 'plains';
-                            spawnMessage = `Could not find coordinates for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Internet connection is required for address lookup.`;
+                            spawnMessage = `Error looking up '${homeTown}'. Spawning you at a random location (plains) instead.`;
                         }
-                    } else {
+                    } catch (geoError) {
+                        console.error("Geocoding error:", geoError);
                         startPosition = randomSpawn();
                         determinedTerrain = 'plains';
-                        spawnMessage = `Error looking up '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Internet connection may be required.`;
+                        spawnMessage = `Error during address lookup for '${homeTown}'. Spawning you at a random location (plains) instead.`;
                     }
-                } catch (error) {
-                    console.error("Geocoding error:", error);
-                    startPosition = randomSpawn();
-                    determinedTerrain = 'plains';
-                    spawnMessage = `Error during address lookup for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Please check your internet connection.`;
                 }
-            }
-            
-            gameState.currentTerrainType = determinedTerrain; // Set the determined terrain
+                
+                gameState.currentTerrainType = determinedTerrain;
 
-            gameState.character = {
-                name: username,
-                speed: 8 + Math.floor(Math.random() * 5),
-                combat: 8 + Math.floor(Math.random() * 5),
-                magic: 8 + Math.floor(Math.random() * 5),
-                luck: 8 + Math.floor(Math.random() * 5),
-                gold: 50,
-                position: startPosition, // Use the chosen/random position
-                inventory: [], 
-                pets: [], 
-                woodcutting: 1, // New skill
-                mining: 1,      // New skill
-                fishing: 1      // New skill
-            };
-            
-            gameState.currentPosition = gameState.character.position;
-            
-            await saveCharacterData();
-            addEventLog(spawnMessage); // Add spawn message to event log
-            startGame();
+                gameState.character = {
+                    name: username,
+                    email: email, // Storing email
+                    homeTown: homeTown, // Storing homeTown
+                    speed: 8 + Math.floor(Math.random() * 5),
+                    combat: 8 + Math.floor(Math.random() * 5),
+                    magic: 8 + Math.floor(Math.random() * 5),
+                    luck: 8 + Math.floor(Math.random() * 5),
+                    gold: 50,
+                    position: startPosition,
+                    inventory: [], 
+                    pets: [], 
+                    woodcutting: 1,
+                    mining: 1,
+                    fishing: 1
+                };
+                
+                gameState.currentPosition = gameState.character.position;
+                
+                await saveCharacterData();
+                addEventLog(spawnMessage + ` Welcome, ${username}!`);
+                startGame();
+
+            } catch (error) {
+                console.error("Error registering account:", error);
+                alert("Error registering: " + error.message + 
+                      (error.code === 'auth/email-already-in-use' ? "\nThis email is already in use. Try logging in or use a different email." : ""));
+            }
         };
 
-        // Load existing character
-        window.loadCharacter = async function() {
-            const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                alert('Please enter your character name!');
+        // Login Existing User
+        window.loginUser = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value.trim();
+
+            if (!email || !password) {
+                alert('Email and Password are required to login!');
                 return;
             }
-            
-            const character = await firebase.loadCharacter(username);
-            if (!character) {
-                alert('Character not found! Try creating a new one.');
-                return;
-            }
-            
-            gameState.currentUser = username;
-            // Ensure inventory is initialized for older save formats
-            if (!character.inventory) {
-                character.inventory = [];
-            }
-            // Ensure pets array is initialized for older save formats
-            if (!character.pets) {
-                character.pets = [];
-            } else {
-                // Ensure pets have the variation property for older saves
-                character.pets.forEach(pet => {
-                    if (pet.variation === undefined) {
-                        pet.variation = null;
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(window.auth, email, password);
+                gameState.currentUser = userCredential.user.uid; // Set UID
+                console.log("User signed in with UID:", gameState.currentUser, "Email:", email);
+
+                const characterData = await window.firebase.loadCharacter(); 
+
+                if (characterData) {
+                    if (!characterData.inventory) characterData.inventory = [];
+                    if (!characterData.pets) characterData.pets = [];
+                    else {
+                        characterData.pets.forEach(pet => {
+                            if (pet.variation === undefined) pet.variation = null;
+                        });
                     }
-                });
+                    if (characterData.woodcutting === undefined) characterData.woodcutting = 1;
+                    if (characterData.mining === undefined) characterData.mining = 1;
+                    if (characterData.fishing === undefined) characterData.fishing = 1;
+                    // Ensure name, email, homeTown are present from older saves or set defaults
+                    if (!characterData.name) characterData.name = "Adventurer"; // Default name if missing
+                    if (!characterData.email) characterData.email = email; // Set email from login
+                    if (!characterData.homeTown) characterData.homeTown = "Unknown"; // Default homeTown
+
+                    gameState.character = characterData;
+                    gameState.currentPosition = characterData.position || [51.505, -0.09]; 
+                    
+                    startGame();
+                } else {
+                    alert('Login successful, but no character data found for this account. Please register if this is your first time, or contact support if you believe this is an error.');
+                    // Keep user logged in, but don't start game. Or, prompt to create character.
+                    // For now, signing out to avoid inconsistent state.
+                    await signOut(window.auth);
+                    gameState.currentUser = null; 
+                    console.log("User signed out as no character data was found after login.");
+                }
+
+            } catch (error) {
+                console.error("Error signing in:", error);
+                alert("Error signing in: " + error.message);
             }
-            // Initialize skills if they don't exist (for older saves)
-            if (character.woodcutting === undefined) {
-                character.woodcutting = 1;
+        };
+        
+        window.logoutCharacter = async function() {
+            try {
+                await signOut(window.auth);
+                console.log("User signed out successfully.");
+                gameState.currentUser = null;
+                gameState.character = null;
+                
+                // Reset map if it exists
+                if (gameState.map) {
+                    gameState.map.remove();
+                    gameState.map = null;
+                }
+                // Clear markers
+                gameState.characterMarker = null;
+                gameState.destinationMarker = null;
+                // Clear other game state if necessary, e.g., travel status
+                if (gameState.moveInterval) clearInterval(gameState.moveInterval);
+                gameState.isMoving = false;
+                gameState.destination = null;
+                gameState.journeyData = null;
+                document.getElementById('travelStatus').style.display = 'none';
+
+
+                document.getElementById('loginPanel').style.display = 'block';
+                document.getElementById('gameContainer').style.display = 'none';
+                
+                const logContainer = document.getElementById('eventLogContent');
+                if (logContainer) logContainer.innerHTML = ''; // Clear previous logs
+                addEventLog("🚪 You have been successfully logged out. See you next time, adventurer!");
+                // Reset username input field
+                const usernameInput = document.getElementById('usernameInput');
+                if(usernameInput) usernameInput.value = '';
+
+
+            } catch (error) {
+                console.error("Error signing out:", error);
+                alert("Error signing out: " + error.message);
             }
-            if (character.mining === undefined) {
-                character.mining = 1;
-            }
-            if (character.fishing === undefined) {
-                character.fishing = 1;
-            }
-            gameState.character = character;
-            gameState.currentPosition = character.position || [51.505, -0.09];
-            
-            startGame();
         };
 
         // Start the game
         function startGame() {
+            if (!window.auth.currentUser || !gameState.character) {
+                alert("Error: Not properly logged in or character data missing. Please log in again.");
+                // Ensure UI is reset to login state
+                document.getElementById('loginPanel').style.display = 'block';
+                document.getElementById('gameContainer').style.display = 'none';
+                if (gameState.map) { // Clean up map if it exists
+                    gameState.map.remove();
+                    gameState.map = null;
+                }
+                return;
+            }
+
             document.getElementById('loginPanel').style.display = 'none';
-            document.getElementById('gameContainer').style.display = 'flex';
+            document.getElementById('gameContainer').style.display = 'flex'; // Or 'block' based on your CSS for gameContainer
             
             updateCharacterDisplay();
-            initMap();
+            
+            // Initialize or update map
+            if (!gameState.map) {
+                initMap(); // This function should set gameState.map
+            } else {
+                 // If map exists, ensure character marker is updated or created
+                if (gameState.characterMarker) {
+                    gameState.characterMarker.setLatLng(gameState.currentPosition).bindPopup("🧙‍♂️ " + gameState.character.name);
+                } else { // This might happen if map existed but marker didn't, or if initMap needs to be more robust
+                    const characterIcon = L.divIcon({ className: 'character-marker', iconSize: [30, 30] });
+                    gameState.characterMarker = L.marker(gameState.currentPosition, { icon: characterIcon })
+                        .addTo(gameState.map)
+                        .bindPopup("🧙‍♂️ " + gameState.character.name);
+                }
+                gameState.map.setView(gameState.currentPosition, gameState.map.getZoom() || 18); // Ensure map is centered
+            }
 
-            // Set currentTerrainType for loaded games
-            if (!gameState.currentTerrainType || gameState.currentTerrainType === 'plains') { // If not set or default 'plains' from global
-                // Try to infer from known locations, otherwise keep/default to 'plains'
+            // Set currentTerrainType (this logic seems okay, but ensure predefinedLocations is accessible)
+            // Assuming predefinedLocations is defined globally or passed appropriately.
+            // For safety, ensure it's defined, or this block might error.
+            // const predefinedLocations = { /* ... as defined elsewhere ... */ };
+            if (!gameState.currentTerrainType || gameState.currentTerrainType === 'plains') { 
                 const pos = gameState.currentPosition;
                 let foundKnownLocation = false;
+                // Ensure predefinedLocations is available in this scope
+                // This might need to be moved or passed if it's not globally available from the other script block
+                const predefinedLocations = {
+                    "london": { coords: [51.505, -0.09], terrain: 'urban' },
+                    "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
+                    "dragon's peak": { coords: [51.480, -0.050], terrain: 'mountains' },
+                    "serene coastline": { coords: [51.500, -0.150], terrain: 'coastline' }
+                };
                 for (const key in predefinedLocations) {
                     if (predefinedLocations[key].coords[0] === pos[0] && predefinedLocations[key].coords[1] === pos[1]) {
                         gameState.currentTerrainType = predefinedLocations[key].terrain;
@@ -1549,20 +1722,17 @@
                     }
                 }
                 if (!foundKnownLocation) {
-                     // If still not set (e.g. custom geocoded location from a previous session, or truly random)
-                    gameState.currentTerrainType = 'plains'; // Default for loaded games or unknown areas
+                    gameState.currentTerrainType = 'plains';
                 }
             }
-            // Ensure it's defined globally if it somehow wasn't
              if (typeof gameState.currentTerrainType === 'undefined') {
                 gameState.currentTerrainType = 'plains'; 
             }
             
-            addEventLog(`🌟 Welcome back, ${gameState.character.name}! Your current terrain is ${gameState.currentTerrainType}. Your adventure continues...`);
-            updateInventoryDisplay(); // <-- Call new function
-            window.openTab('character'); // Open Character tab by default
-
-            window.updatePetDisplay(); // <-- Add this call
+            addEventLog(`🌟 Welcome, ${gameState.character.name}! Your current terrain is ${gameState.currentTerrainType}. Your adventure begins/continues...`);
+            updateInventoryDisplay(); 
+            window.openTab('character'); 
+            window.updatePetDisplay();
         }
 
         // Function to update the inventory display
