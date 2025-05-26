@@ -683,6 +683,14 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
 
+      window.firebaseAuthFunctions = {
+          createUserWithEmailAndPassword,
+          signInWithEmailAndPassword,
+          signOut,
+          sendEmailVerification,
+          sendPasswordResetEmail
+      };
+
       // Make them accessible globally if needed by other parts of your script
       window.auth = auth;
       window.db = db;
@@ -1507,7 +1515,7 @@
             }
 
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const userCredential = await window.firebaseAuthFunctions.createUserWithEmailAndPassword(auth, email, password);
                 gameState.currentUser = userCredential.user.uid; // Set UID
                 console.log("User account created with UID:", gameState.currentUser);
 
@@ -1604,7 +1612,7 @@
             addEventLog(spawnMessage);
 
             try {
-                await sendEmailVerification(auth.currentUser);
+                await window.firebaseAuthFunctions.sendEmailVerification(auth.currentUser);
                 document.getElementById('authError').textContent = 'Registration successful! A verification email has been sent to your email address. Please verify your email before logging in next time.';
             } catch (verificationError) {
                 console.error("Error sending verification email:", verificationError);
@@ -1615,6 +1623,7 @@
 
             } catch (error) {
                 console.error("Error creating account:", error);
+                console.log("Full error object during registration:", error); // Add this line
                 handleAuthError(error, 'authError');
             }
         };
@@ -1635,7 +1644,7 @@
             }
 
             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await window.firebaseAuthFunctions.signInWithEmailAndPassword(auth, email, password);
                 gameState.currentUser = userCredential.user.uid; // Set UID
                 console.log("User signed in with UID:", gameState.currentUser);
 
@@ -1681,7 +1690,7 @@
                     document.getElementById('authError').textContent = 'Login successful, but no character data found. Try "Register" to create a new character.';
                     gameState.currentUser = null; // Clear UID as no character data
                     // Optionally sign out the user if no character data is found after login
-                    await signOut(window.auth); 
+                    await window.firebaseAuthFunctions.signOut(window.auth); 
                     console.log("User signed out as no character data was found.");
                 }
 
@@ -1727,7 +1736,7 @@
         
         window.logoutCharacter = async function() {
             try {
-                await signOut(window.auth);
+                await window.firebaseAuthFunctions.signOut(window.auth);
                 console.log("User signed out successfully.");
                 gameState.currentUser = null;
                 gameState.character = null;
@@ -2017,7 +2026,7 @@
             }
 
             try {
-                await sendPasswordResetEmail(auth, email.trim());
+                await window.firebaseAuthFunctions.sendPasswordResetEmail(auth, email.trim());
                 document.getElementById('authError').textContent = 'If an account exists for ' + email.trim() + ', a password reset email has been sent. Please check your inbox.';
             } catch (error) {
                 console.error("Password reset error:", error);
