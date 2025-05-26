@@ -505,12 +505,15 @@
 <body>
     <div class="login-panel" id="loginPanel">
         <h2>🗡️ Enter the Realm 🗡️</h2>
-        <input type="text" id="usernameInput" placeholder="Enter your adventurer name" maxlength="20">
+        <input type="text" id="usernameInput" placeholder="Character Name (for new registration)" maxlength="20">
+        <input type="email" id="emailInput" placeholder="Enter your email" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+        <input type="password" id="passwordInput" placeholder="Password" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+        <input type="password" id="confirmPasswordInput" placeholder="Confirm your password" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
         <br>
         <label for="spawnLocationInput">Choose Starting Area:</label>
         <input type="text" id="spawnLocationInput" placeholder="e.g., forest, mountains, or a real address like 'Spartanburg SC'" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
-        <button class="login-btn" onclick="createCharacter()">Begin Adventure</button>
-        <button class="login-btn" onclick="loadCharacter()">Continue Journey</button>
+        <button class="login-btn" onclick="createCharacter()">Register</button>
+        <button class="login-btn" onclick="loadCharacter()">Login</button>
     </div>
 
     <div class="game-container" id="gameContainer" style="display: none;">
@@ -1459,17 +1462,33 @@
         // Create new character
         window.createCharacter = async function() {
             const username = document.getElementById('usernameInput').value.trim();
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            const confirmPassword = document.getElementById('confirmPasswordInput').value;
+
             if (!username) {
                 alert('Please enter an adventurer name!');
                 return;
             }
-
-            const email = username + "@example.com"; // Insecure, for testing
-            const password = "password123"; // Insecure, for testing
-            alert("DEVELOPMENT NOTE: Using placeholder email '" + email + "' and password 'password123'. This is not secure and for testing only.");
+            if (!email) {
+                alert('Please enter an email!');
+                return;
+            }
+            if (!email.includes('@')) {
+                alert('Please enter a valid email address!');
+                return;
+            }
+            if (!password) {
+                alert('Please enter a password!');
+                return;
+            }
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
 
             try {
-                const userCredential = await createUserWithEmailAndPassword(window.auth, email, password);
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 gameState.currentUser = userCredential.user.uid; // Set UID
                 console.log("User account created with UID:", gameState.currentUser);
 
@@ -1564,18 +1583,20 @@
 
         // Load existing character
         window.loadCharacter = async function() {
-            const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                alert('Please enter your character name to continue!');
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+
+            if (!email) {
+                alert('Please enter your email!');
+                return;
+            }
+            if (!password) {
+                alert('Please enter your password!');
                 return;
             }
 
-            const email = username + "@example.com"; // Insecure, for testing
-            const password = "password123"; // Insecure, for testing
-            alert("DEVELOPMENT NOTE: Using placeholder email '" + email + "' and password 'password123' to sign in. This is not secure and for testing only.");
-
             try {
-                const userCredential = await signInWithEmailAndPassword(window.auth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 gameState.currentUser = userCredential.user.uid; // Set UID
                 console.log("User signed in with UID:", gameState.currentUser);
 
