@@ -512,6 +512,8 @@
         <br>
         <label for="spawnLocationInput">Choose Starting Area:</label>
         <input type="text" id="spawnLocationInput" placeholder="e.g., forest, mountains, or a real address like 'Spartanburg SC'" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+        <a href="#" id="forgotPasswordLink" style="display: block; margin-top: 10px; color: #f39c12; text-decoration: none;">Forgot Password?</a>
+        <div id="authError" style="color: red; margin-bottom: 10px; margin-top: 5px;"></div>
         <button class="login-btn" onclick="createCharacter()">Register</button>
         <button class="login-btn" onclick="loadCharacter()">Login</button>
     </div>
@@ -656,7 +658,7 @@
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
-      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
       import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
       // Your web app's Firebase configuration
@@ -737,13 +739,6 @@
 
     </script>
     <script type="module">
-        // IMPORTANT DEVELOPMENT NOTE:
-        // The current authentication uses a fixed password ("password123") and derives
-        // the email from the username (username + "@example.com").
-        // This is INSECURE and for DEVELOPMENT TESTING ONLY.
-        // For a production system, you MUST implement proper password handling and
-        // ideally use real email addresses for account creation and recovery.
-
         // Game State
         let gameState = {
             currentUser: null,
@@ -1461,6 +1456,7 @@
 
         // Create new character
         window.createCharacter = async function() {
+            document.getElementById('authError').textContent = '';
             const username = document.getElementById('usernameInput').value.trim();
             const email = document.getElementById('emailInput').value.trim();
             const password = document.getElementById('passwordInput').value;
@@ -1573,16 +1569,26 @@
             
             await saveCharacterData(); // This will use the UID from auth.currentUser via firebase.saveCharacter
             addEventLog(spawnMessage);
+
+            try {
+                await sendEmailVerification(auth.currentUser);
+                document.getElementById('authError').textContent = 'Registration successful! A verification email has been sent to your email address. Please verify your email before logging in next time.';
+            } catch (verificationError) {
+                console.error("Error sending verification email:", verificationError);
+                document.getElementById('authError').textContent = 'Registration successful, but failed to send verification email. You can request another one later. ' + verificationError.message;
+            }
+
             startGame();
 
             } catch (error) {
                 console.error("Error creating account:", error);
-                alert("Error creating account: " + error.message + "\n(Note: Usernames must be unique. If you've used this name before, try 'Continue Journey' or a different name.)");
+                handleAuthError(error, 'authError');
             }
         };
 
         // Load existing character
         window.loadCharacter = async function() {
+            document.getElementById('authError').textContent = '';
             const email = document.getElementById('emailInput').value.trim();
             const password = document.getElementById('passwordInput').value;
 
@@ -1622,7 +1628,7 @@
                     startGame();
                 } else {
                     // This case means user authenticated but no character data found for that UID.
-                    alert('Account found, but no character data exists for this adventurer. Try "Begin Adventure" to create a new character.');
+                    document.getElementById('authError').textContent = 'Login successful, but no character data found. Try "Register" to create a new character.';
                     gameState.currentUser = null; // Clear UID as no character data
                     // Optionally sign out the user if no character data is found after login
                     await signOut(window.auth); 
@@ -1631,9 +1637,40 @@
 
             } catch (error) {
                 console.error("Error signing in:", error);
-                alert("Error signing in: " + error.message + "\n(Note: Ensure you've used this name before, or try 'Begin Adventure' with a new name.)");
+                handleAuthError(error, 'authError');
             }
         };
+        
+        function handleAuthError(error, errorElementId) {
+            const errorDiv = document.getElementById(errorElementId);
+            if (!errorDiv) return; // Should not happen if ID is correct
+
+            console.error("Auth Error Code:", error.code); // Log the error code for debugging
+
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorDiv.textContent = 'This email address is already in use. Please try logging in or use a different email.';
+                    break;
+                case 'auth/invalid-email':
+                    errorDiv.textContent = 'The email address is not valid. Please check the format.';
+                    break;
+                case 'auth/weak-password':
+                    errorDiv.textContent = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+                    break;
+                case 'auth/user-not-found':
+                    errorDiv.textContent = 'No account found with this email address. Please check your email or register for a new account.';
+                    break;
+                case 'auth/wrong-password':
+                    errorDiv.textContent = 'Incorrect password. Please try again.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorDiv.textContent = 'Too many login attempts. Please try again later or reset your password.';
+                    break;
+                default:
+                    errorDiv.textContent = 'An unexpected error occurred during authentication. Please try again.'; // Generic message for unknown errors
+                    break;
+            }
+        }
         
         window.logoutCharacter = async function() {
             try {
@@ -1775,6 +1812,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Game starts with login panel visible
 
+            document.getElementById('forgotPasswordLink').addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent default link behavior
+                handlePasswordReset(); 
+            });
+
             const tabButtons = document.querySelectorAll('#unifiedUIPanel .tab-button');
             tabButtons.forEach(button => {
                 button.addEventListener('click', function() {
@@ -1857,6 +1899,27 @@
                petsContent.innerHTML = '<p>No loyal companions by your side... yet!</p>';
            }
        }
+
+       async function handlePasswordReset() {
+            document.getElementById('authError').textContent = '';
+            const email = prompt("Please enter your email address to reset your password:");
+
+            if (!email || email.trim() === "") {
+                document.getElementById('authError').textContent = 'Password reset cancelled or no email provided.';
+                return;
+            }
+
+            try {
+                await sendPasswordResetEmail(auth, email.trim());
+                document.getElementById('authError').textContent = 'If an account exists for ' + email.trim() + ', a password reset email has been sent. Please check your inbox.';
+            } catch (error) {
+                console.error("Password reset error:", error);
+                // Provide a generic message to avoid disclosing whether an email exists or not.
+                document.getElementById('authError').textContent = 'Error sending password reset email. Please ensure the email is correct or try again later.';
+                // Optionally use the more detailed handler for debugging:
+                // handleAuthError(error, 'authError'); 
+            }
+        }
     </script>
 </body>
 </html>
