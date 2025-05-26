@@ -549,6 +549,10 @@
                     <span class="stat-value" id="luckStat">10</span>
                 </div>
                 <div class="stat-row">
+                    <span class="stat-label">💪 Strength:</span>
+                    <span class="stat-value" id="strengthStat">0</span>
+                </div>
+                <div class="stat-row">
                     <span class="stat-label">💰 Gold:</span>
                     <span class="stat-value" id="goldStat">50</span>
                 </div>
@@ -740,6 +744,15 @@
     </script>
     <script type="module">
         // Game State
+        const petImageMapping = {
+            'wolf': 'images/wolf.png',
+            'bear': 'images/brown_bear.png',
+            'goblin': 'images/goblin.png',
+            'gorilla': 'images/gorilla.png',
+            'gryphon': 'images/gryphon.png',
+            'minotaur': 'images/minotaur.png'
+        };
+
         let gameState = {
             currentUser: null,
             character: null,
@@ -834,8 +847,17 @@
                                 id: 'pet_' + Date.now(), // Simple unique ID
                                 type: "Wolf", 
                                 name: petName,
-                                variation: variation // Add variation property
+        variation: variation, // Add variation property
+        stats: { luck: 0, strength: 0, speed: 0 } // Initialize stats
                             };
+
+    // Randomly distribute 2 additional stat points
+    const statKeys = ["luck", "strength", "speed"];
+    for (let i = 0; i < 2; i++) {
+        const randomStatKey = statKeys[Math.floor(Math.random() * statKeys.length)];
+        newPet.stats[randomStatKey]++;
+    }
+
                             character.pets.push(newPet);
 
                             let variationText = "";
@@ -1435,6 +1457,7 @@
             document.getElementById('combatStat').textContent = gameState.character.combat;
             document.getElementById('magicStat').textContent = gameState.character.magic;
             document.getElementById('luckStat').textContent = gameState.character.luck;
+            document.getElementById('strengthStat').textContent = gameState.character.strength || 0; // Display strength
             document.getElementById('goldStat').textContent = gameState.character.gold;
             // Update new skill displays
             document.getElementById('woodcuttingStat').textContent = gameState.character.woodcutting;
@@ -1556,6 +1579,7 @@
                 combat: 8 + Math.floor(Math.random() * 5),
                 magic: 8 + Math.floor(Math.random() * 5),
                 luck: 8 + Math.floor(Math.random() * 5),
+                strength: 0, // Initialize player strength
                 gold: 50,
                 position: startPosition, // Use the chosen/random position
                 inventory: [], 
@@ -1564,6 +1588,15 @@
                 mining: 1,      // New skill
                 fishing: 1      // New skill
             };
+            // Store base stats
+            gameState.character.baseStats = {
+                speed: gameState.character.speed,
+                combat: gameState.character.combat,
+                magic: gameState.character.magic,
+                luck: gameState.character.luck,
+                strength: gameState.character.strength
+            };
+            gameState.character.activePetId = null; // Initialize activePetId
             
             gameState.currentPosition = gameState.character.position;
             
@@ -1621,8 +1654,25 @@
                     if (characterData.woodcutting === undefined) characterData.woodcutting = 1;
                     if (characterData.mining === undefined) characterData.mining = 1;
                     if (characterData.fishing === undefined) characterData.fishing = 1;
+                    characterData.strength = characterData.strength || 0; // Ensure strength exists
+
+                    // Ensure baseStats exist, create if not (for older characters)
+                    if (!characterData.baseStats) {
+                        characterData.baseStats = {
+                            speed: characterData.speed,
+                            combat: characterData.combat,
+                            magic: characterData.magic,
+                            luck: characterData.luck,
+                            strength: characterData.strength 
+                        };
+                    }
+                     // Ensure baseStats includes strength if it was added later
+                    if (characterData.baseStats.strength === undefined) {
+                        characterData.baseStats.strength = characterData.strength || 0;
+                    }
                     
                     gameState.character = characterData;
+                    gameState.character.activePetId = characterData.activePetId || null; // Load activePetId or default to null
                     gameState.currentPosition = characterData.position || [51.505, -0.09]; // Default if no position saved
                     
                     startGame();
@@ -1665,6 +1715,9 @@
                     break;
                 case 'auth/too-many-requests':
                     errorDiv.textContent = 'Too many login attempts. Please try again later or reset your password.';
+                    break;
+                case 'auth/operation-not-allowed':
+                    errorDiv.textContent = 'Email/Password sign-in is not enabled for this project. Please enable it in the Firebase console (Authentication > Sign-in method).';
                     break;
                 default:
                     errorDiv.textContent = 'An unexpected error occurred during authentication. Please try again.'; // Generic message for unknown errors
@@ -1780,7 +1833,8 @@
             addEventLog(`🌟 Welcome, ${gameState.character.name}! Your current terrain is ${gameState.currentTerrainType}. Your adventure begins/continues...`);
             updateInventoryDisplay(); 
             window.openTab('character'); 
-            window.updatePetDisplay();
+            window.updatePetDisplay(); // This will call applyActivePetStats
+            window.applyActivePetStats(); // Explicitly call after loading/starting to ensure stats are correct
         }
 
         // Function to update the inventory display
@@ -1868,30 +1922,83 @@
                    const petItem = document.createElement('li');
                    petItem.style.padding = '5px 0';
                    petItem.style.borderBottom = '1px solid #444'; // Optional: separator
+                   petItem.innerHTML = ''; // Clear previous content to use <img> and text nodes/spans
 
-                   // Display pet icon based on type (simple emojis for now)
-                   let petIcon = '❓'; // Default icon
-                   if (pet.type.toLowerCase() === 'wolf') {
-                       petIcon = '🐺';
-                   } else if (pet.type.toLowerCase() === 'bear') {
-                       petIcon = '🐻';
-                   } else if (pet.type.toLowerCase() === 'goblin') {
-                       petIcon = '👺';
+                   // Pet Image
+                   const imagePath = petImageMapping[pet.type.toLowerCase()];
+                   if (imagePath) {
+                       const img = document.createElement('img');
+                       img.src = imagePath;
+                       img.style.width = '20px';
+                       img.style.height = '20px';
+                       img.style.marginRight = '8px';
+                       img.style.verticalAlign = 'middle'; // Align image nicely with text
+                       petItem.appendChild(img);
+                   } else {
+                       const iconSpan = document.createElement('span');
+                       iconSpan.textContent = '❓ '; // Default emoji if no image
+                       iconSpan.style.marginRight = '8px';
+                       petItem.appendChild(iconSpan);
                    }
 
                    let displayName = pet.name;
                    petItem.style.color = ''; // Reset color
-                   petItem.style.opacity = ''; // Reset opacity
+                   // Opacity for ghost is better handled on the image or a wrapper if needed, 
+                   // for now, text color will be standard unless shiny.
+                   // petItem.style.opacity = ''; // Reset opacity - not needed if clearing innerHTML
 
                    if (pet.variation === 'shiny') {
                        displayName = `[Shiny] ${pet.name}`;
-                       petItem.style.color = '#FFD700'; // Gold color for shiny
+                       // Apply shiny color to the text span, not the whole li
                    } else if (pet.variation === 'ghost') {
                        displayName = `[Ghost] ${pet.name}`;
-                       petItem.style.opacity = '0.7'; // Slight transparency for ghost
+                       // Ghost opacity can be applied to the image if desired, or text span
                    }
                    
-                   petItem.textContent = `${petIcon} ${displayName} (${pet.type})`;
+                   let statsText = " - Stats: LCK 0, STR 0, SPD 0"; // Default text
+                   if (pet.stats) {
+                       statsText = ` - Stats: LCK ${pet.stats.luck || 0}, STR ${pet.stats.strength || 0}, SPD ${pet.stats.speed || 0}`;
+                   }
+
+                   // Text content next to the image
+                   const textSpan = document.createElement('span');
+                   textSpan.textContent = `${displayName} (${pet.type})${statsText}`;
+                   if (pet.variation === 'shiny') {
+                       textSpan.style.color = '#FFD700';
+                   } else if (pet.variation === 'ghost') {
+                        // Example: apply opacity to text if it's a ghost, or image could be styled too
+                        // For simplicity, we'll just note it in display name.
+                        // To make image semi-transparent: find the img child and set its opacity.
+                        const petImageElement = petItem.querySelector('img');
+                        if(petImageElement) petImageElement.style.opacity = '0.7';
+                   }
+                   petItem.appendChild(textSpan);
+                   
+                   petItem.style.cursor = 'pointer'; // Make it look clickable
+
+                   // Visual indication for active pet
+                   if (gameState.character && pet.id === gameState.character.activePetId) {
+                       petItem.style.backgroundColor = '#4a5d70'; // Active pet highlight
+                   } else {
+                       petItem.style.backgroundColor = ''; // Default background
+                   }
+
+                   // Click event listener for pet selection
+                   petItem.addEventListener('click', () => {
+                       if (gameState.character) {
+                           if (gameState.character.activePetId === pet.id) {
+                               gameState.character.activePetId = null; // Deselect if already active
+                           } else {
+                               gameState.character.activePetId = pet.id; // Select new pet
+                           }
+                           window.updatePetDisplay(); // Refresh display to show selection
+                           if (typeof window.applyActivePetStats === 'function') {
+                               window.applyActivePetStats(); // Apply stat changes (placeholder for now)
+                           }
+                           saveCharacterData(); // Save change in active pet
+                       }
+                   });
+
                    petList.appendChild(petItem);
                });
                petsContent.appendChild(petList);
@@ -1920,6 +2027,40 @@
                 // handleAuthError(error, 'authError'); 
             }
         }
+
+       window.applyActivePetStats = function() {
+           if (!gameState.character) return;
+
+           // Ensure baseStats are initialized (should be done in create/load character)
+           if (!gameState.character.baseStats) {
+               console.error("baseStats not initialized on character!");
+               // Fallback: Initialize baseStats if somehow missed
+               gameState.character.baseStats = {
+                   speed: gameState.character.speed,
+                   combat: gameState.character.combat, // Combat is not affected by pets in this logic
+                   magic: gameState.character.magic,   // Magic is not affected by pets in this logic
+                   luck: gameState.character.luck,
+                   strength: gameState.character.strength || 0
+               };
+           }
+            // Reset to base stats (only for stats pets can affect)
+            gameState.character.luck = gameState.character.baseStats.luck;
+            gameState.character.strength = gameState.character.baseStats.strength;
+            gameState.character.speed = gameState.character.baseStats.speed;
+            // Note: Combat and Magic are not currently modified by pets in this design.
+
+            const activePetId = gameState.character.activePetId;
+            if (activePetId && gameState.character.pets) {
+                const activePet = gameState.character.pets.find(p => p.id === activePetId);
+                if (activePet && activePet.stats) {
+                    gameState.character.luck += (activePet.stats.luck || 0);
+                    gameState.character.strength += (activePet.stats.strength || 0);
+                    gameState.character.speed += (activePet.stats.speed || 0);
+                }
+            }
+            window.updateCharacterDisplay();
+            // saveCharacterData(); // Already called in updatePetDisplay which calls this, or if called standalone
+       };
     </script>
 </body>
 </html>
