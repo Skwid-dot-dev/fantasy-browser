@@ -65,14 +65,15 @@
             overflow-y: auto;
         }
 
-        /* Travel Status - Top Right */
+        /* Travel Status - Bottom Right */
         .travel-status {
-            top: 20px;
+            top: auto;
+            bottom: 20px;
             right: 20px;
             width: 300px;
             background: rgba(46, 204, 113, 0.95);
             border-color: #2ecc71;
-            display: none;
+            display: none !important; /* Ensure old panel is hidden */
         }
 
         /* Event Log - Bottom Left */
@@ -504,18 +505,33 @@
 </head>
 <body>
     <div class="login-panel" id="loginPanel">
-        <h2>🗡️ Enter the Realm 🗡️</h2>
-        <input type="text" id="usernameInput" placeholder="Character Name (for new registration)" maxlength="20">
+        <h2 id="loginPanelTitle">🗡️ Enter the Realm 🗡️</h2>
         <input type="email" id="emailInput" placeholder="Enter your email" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
         <input type="password" id="passwordInput" placeholder="Password" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
-        <input type="password" id="confirmPasswordInput" placeholder="Confirm your password" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
-        <br>
-        <label for="spawnLocationInput">Choose Starting Area:</label>
-        <input type="text" id="spawnLocationInput" placeholder="e.g., forest, mountains, or a real address like 'Spartanburg SC'" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
-        <a href="#" id="forgotPasswordLink" style="display: block; margin-top: 10px; color: #f39c12; text-decoration: none;">Forgot Password?</a>
-        <div id="authError" style="color: red; margin-bottom: 10px; margin-top: 5px;"></div>
-        <button class="login-btn" onclick="createCharacter()">Register</button>
-        <button class="login-btn" onclick="loadCharacter()">Login</button>
+        
+        <div id="registrationFields" style="display: none;">
+            <input type="text" id="usernameInput" placeholder="Character Name (for new registration)" maxlength="20" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+            <input type="password" id="confirmPasswordInput" placeholder="Confirm your password" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+            <br>
+            <label for="spawnLocationInput" id="spawnLocationLabel" style="display: block; margin-top:10px; text-align: left;">Choose Starting Area:</label>
+            <input type="text" id="spawnLocationInput" placeholder="e.g., forest, mountains, or a real address like 'Spartanburg SC'" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #34495e; border-radius: 5px; background: rgba(52, 73, 94, 0.5); color: #ecf0f1; font-size: 1em;">
+        </div>
+
+        <div id="loginSpecificFields">
+            <div style="margin: 10px 0; text-align: left;">
+                <input type="checkbox" id="rememberMeCheckbox" style="margin-right: 5px; vertical-align: middle;">
+                <label for="rememberMeCheckbox" style="color: #ecf0f1; font-size: 0.9em; vertical-align: middle;">Remember me</label>
+            </div>
+            <a href="#" id="forgotPasswordLink" style="display: block; margin-top: 10px; color: #f39c12; text-decoration: none;">Forgot Password?</a>
+        </div>
+        
+        <div id="authError" style="color: red; margin-bottom: 10px; margin-top: 10px; min-height: 1.2em;"></div>
+
+        <button class="login-btn" id="loginButton" onclick="loadCharacter()">Login</button>
+        <button class="login-btn" id="switchToRegisterButton" onclick="showRegisterForm()">New Adventurer? Register</button>
+        
+        <button class="login-btn" id="completeRegisterButton" onclick="createCharacter()" style="display: none;">Complete Registration</button>
+        <button class="login-btn" id="backToLoginButton" onclick="showLoginForm()" style="display: none;">Back to Login</button>
     </div>
 
     <div class="game-container" id="gameContainer" style="display: none;">
@@ -528,6 +544,7 @@
                 <button class="tab-button" data-tab="pets">🐾</button> 
                 <button class="tab-button" data-tab="eventLog">📜</button>
                 <button class="tab-button" data-tab="instructions">🗺️</button>
+                <button class="tab-button" data-tab="travel">🚀</button>
                 <button class="tab-button" onclick="window.logoutCharacter()">🚪</button>
             </div>
             <div id="characterTabContent" class="tab-content">
@@ -555,6 +572,10 @@
                 <div class="stat-row">
                     <span class="stat-label">💰 Gold:</span>
                     <span class="stat-value" id="goldStat">50</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">❤️ Health:</span>
+                    <span class="stat-value"><span id="healthStat">100</span> / <span id="maxHealthStat">100</span></span>
                 </div>
                 <hr style="border-top: 1px solid #f39c12; margin: 10px 0;"> <!-- Visual separator -->
                 <div class="stat-row">
@@ -586,6 +607,17 @@
             </div>
             <div id="petsTabContent" class="tab-content">
                 <!-- Acquired pets will be listed here by JavaScript -->
+            </div>
+            <div id="travelTabContent" class="tab-content">
+                <div id="newTravelInfo" style="margin-bottom: 10px; color: #2ecc71; font-weight: bold;">Ready to adventure!</div>
+                <div class="progress-bar" style="margin-bottom: 10px;">
+                    <div class="progress-fill" id="newProgressFill"></div>
+                </div>
+                <button class="choice-btn" onclick="cancelTravel()" style="margin-top: 8px; padding: 8px 16px; font-size: 0.9em; background: linear-gradient(135deg, #e74c3c, #c0392b); width: 100%; margin-bottom: 15px;">Cancel Journey</button>
+                <hr style="border-top: 1px solid #f39c12; margin: 15px 0;">
+                <div style="margin-top: 15px;">
+                    <strong>Total Distance Traveled:</strong> <span id="totalDistanceDisplay">0</span> m
+                </div>
             </div>
         </div>
         
@@ -662,7 +694,7 @@
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
-      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
       import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
       // Your web app's Firebase configuration
@@ -688,7 +720,14 @@
           signInWithEmailAndPassword,
           signOut,
           sendEmailVerification,
-          sendPasswordResetEmail
+          sendPasswordResetEmail,
+          setPersistence, // Make setPersistence available
+          Auth: { // Nest Persistence constants correctly
+              Persistence: {
+                  LOCAL: browserLocalPersistence,
+                  SESSION: browserSessionPersistence
+              }
+          }
       };
 
       // Make them accessible globally if needed by other parts of your script
@@ -704,6 +743,7 @@
               const uid = window.auth.currentUser.uid;
               const userDocRef = doc(db, "characters", uid); // Use UID for document ID
               try {
+                  console.log('Firebase: Attempting to save character:', characterData.name, 'Health:', characterData.health, 'Max Health:', characterData.maxHealth, 'Total Distance:', characterData.totalDistanceTraveled);
                   await setDoc(userDocRef, characterData);
                   console.log("Character saved for UID:", uid);
                   return true;
@@ -1055,6 +1095,42 @@
                         reward: 0 
                     }
                 ]
+            },
+            {
+                title: "Spiky Trap!",
+                description: "You accidentally step on a hidden spiky trap.",
+                choices: [
+                    {
+                        text: "Ouch!",
+                        stat: null, 
+                        success: "The spikes retract. That really hurt.", 
+                        fail: "",
+                        reward: 0, 
+                        penalty: 0,
+                        action: function(character) {
+                            window.damagePlayer(10); 
+                            return "Lost 10 health."; 
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Healing Fountain",
+                description: "You discover a small fountain bubbling with clear, glowing water.",
+                choices: [
+                    {
+                        text: "Drink from it (Heal 15)",
+                        stat: null,
+                        success: "The water is refreshing and invigorating!",
+                        fail: "",
+                        reward: 0,
+                        penalty: 0,
+                        action: function(character) {
+                            window.healPlayer(15); 
+                            return "Gained 15 health."; 
+                        }
+                    }
+                ]
             }
         ];
 
@@ -1147,7 +1223,8 @@
             if (gameState.isMoving) return;
             
             gameState.isMoving = true;
-            document.getElementById('travelStatus').style.display = 'block';
+            window.openTab('travel');
+            // document.getElementById('travelStatus').style.display = 'block'; // Old panel
             
             // Store journey data in gameState for resuming
             gameState.journeyData = {
@@ -1193,9 +1270,15 @@
         // Update travel information display
         function updateTravelInfo(totalDistance, distanceTraveled) {
             const progress = (distanceTraveled / totalDistance) * 100;
-            document.getElementById('travelInfo').textContent = 
-                `Distance: ${distanceTraveled.toFixed(0)}/${totalDistance.toFixed(0)} m`;
-            document.getElementById('progressFill').style.width = progress + '%';
+            const travelInfoEl = document.getElementById('newTravelInfo');
+            const progressFillEl = document.getElementById('newProgressFill');
+
+            if (travelInfoEl) {
+                travelInfoEl.textContent = `Distance: ${distanceTraveled.toFixed(0)}/${totalDistance.toFixed(0)} m`;
+            }
+            if (progressFillEl) {
+                progressFillEl.style.width = progress + '%';
+            }
         }
 
         // Pause movement (for events)
@@ -1249,6 +1332,11 @@
             // Update current position
             gameState.currentPosition = [...gameState.destination];
             gameState.destination = null;
+
+            if (gameState.journeyData && gameState.journeyData.totalDistance) {
+                gameState.character.totalDistanceTraveled = (gameState.character.totalDistanceTraveled || 0) + gameState.journeyData.totalDistance;
+            }
+            updateTotalDistanceDisplay(); // Update display of total distance
             gameState.journeyData = null; // Clear journey data
             
             // Remove destination marker
@@ -1257,7 +1345,11 @@
                 gameState.destinationMarker = null;
             }
             
-            document.getElementById('travelStatus').style.display = 'none';
+            // document.getElementById('travelStatus').style.display = 'none'; // Old panel
+            const travelInfoEl = document.getElementById('newTravelInfo');
+            if (travelInfoEl) {
+                travelInfoEl.textContent = "Journey complete! Ready for a new adventure.";
+            }
             addEventLog("🎯 Reached your destination! Click somewhere new to continue exploring.");
             
             saveCharacterData();
@@ -1275,7 +1367,11 @@
             
             gameState.destination = null;
             gameState.journeyData = null; // Clear journey data
-            document.getElementById('travelStatus').style.display = 'none';
+            // document.getElementById('travelStatus').style.display = 'none'; // Old panel
+            const travelInfoEl = document.getElementById('newTravelInfo');
+            if (travelInfoEl) {
+                travelInfoEl.textContent = "Journey cancelled. Ready for a new adventure.";
+            }
             addEventLog("🛑 Journey cancelled. Ready for a new adventure!");
         };
 
@@ -1467,6 +1563,8 @@
             document.getElementById('luckStat').textContent = gameState.character.luck;
             document.getElementById('strengthStat').textContent = gameState.character.strength || 0; // Display strength
             document.getElementById('goldStat').textContent = gameState.character.gold;
+            document.getElementById('healthStat').textContent = gameState.character.health;
+            document.getElementById('maxHealthStat').textContent = gameState.character.maxHealth;
             // Update new skill displays
             document.getElementById('woodcuttingStat').textContent = gameState.character.woodcutting;
             document.getElementById('miningStat').textContent = gameState.character.mining;
@@ -1478,6 +1576,7 @@
             // gameState.currentUser should now be the UID after login/creation
             if (window.auth.currentUser && gameState.character) {
                 gameState.character.position = gameState.currentPosition;
+                console.log('Saving character data. Health:', gameState.character.health, 'Max Health:', gameState.character.maxHealth, 'Total Distance:', gameState.character.totalDistanceTraveled);
                 // The username/UID is handled by firebase.saveCharacter internally now
                 await window.firebase.saveCharacter(gameState.character);
             } else {
@@ -1588,7 +1687,10 @@
                 magic: 8 + Math.floor(Math.random() * 5),
                 luck: 8 + Math.floor(Math.random() * 5),
                 strength: 0, // Initialize player strength
+                health: 100,
+                maxHealth: 100,
                 gold: 50,
+                totalDistanceTraveled: 0,
                 position: startPosition, // Use the chosen/random position
                 inventory: [], 
                 pets: [], 
@@ -1633,6 +1735,21 @@
             document.getElementById('authError').textContent = '';
             const email = document.getElementById('emailInput').value.trim();
             const password = document.getElementById('passwordInput').value;
+            const rememberMe = document.getElementById('rememberMeCheckbox').checked;
+            console.log("Remember me checked: " + rememberMe);
+
+            // Future: Implement Firebase persistence based on rememberMe state
+            // For now, this console.log is the main requirement.
+            // Example of how persistence would be set (before signInWithEmailAndPassword):
+            // const persistenceToSet = rememberMe ? window.firebaseAuthFunctions.Auth.Persistence.LOCAL : window.firebaseAuthFunctions.Auth.Persistence.SESSION;
+            // try {
+            //     await window.firebaseAuthFunctions.setPersistence(auth, persistenceToSet);
+            //     console.log("Firebase persistence set to: " + (rememberMe ? "LOCAL" : "SESSION"));
+            // } catch (error) {
+            //     console.error("Error setting Firebase persistence:", error);
+            //     // Handle error appropriately, maybe alert user or log
+            // }
+
 
             if (!email) {
                 alert('Please enter your email!');
@@ -1652,6 +1769,7 @@
                 const characterData = await window.firebase.loadCharacter(); 
 
                 if (characterData) {
+                    console.log('Loaded character data. Raw health:', characterData.health, 'Raw maxHealth:', characterData.maxHealth, 'Raw totalDistance:', characterData.totalDistanceTraveled);
                     // Ensure inventory is initialized
                     if (!characterData.inventory) characterData.inventory = [];
                     if (!characterData.pets) characterData.pets = [];
@@ -1664,6 +1782,21 @@
                     if (characterData.mining === undefined) characterData.mining = 1;
                     if (characterData.fishing === undefined) characterData.fishing = 1;
                     characterData.strength = characterData.strength || 0; // Ensure strength exists
+                    
+                    // Ensure health and maxHealth, defaulting if not present
+                    if (typeof characterData.health === 'undefined') {
+                        characterData.health = 100;
+                    }
+                    if (typeof characterData.maxHealth === 'undefined') {
+                        characterData.maxHealth = 100;
+                    }
+                    if (typeof characterData.totalDistanceTraveled === 'undefined') {
+                        characterData.totalDistanceTraveled = 0;
+                    }
+                    
+                    gameState.character = characterData; // Assign before logging default-applied values
+                    console.log('Character data after defaulting. Health:', gameState.character.health, 'Max Health:', gameState.character.maxHealth, 'Total Distance:', gameState.character.totalDistanceTraveled);
+
 
                     // Ensure baseStats exist, create if not (for older characters)
                     if (!characterData.baseStats) {
@@ -1679,8 +1812,7 @@
                     if (characterData.baseStats.strength === undefined) {
                         characterData.baseStats.strength = characterData.strength || 0;
                     }
-                    
-                    gameState.character = characterData;
+                    // gameState.character = characterData; // Already assigned above for logging
                     gameState.character.activePetId = characterData.activePetId || null; // Load activePetId or default to null
                     gameState.currentPosition = characterData.position || [51.505, -0.09]; // Default if no position saved
                     
@@ -1844,7 +1976,46 @@
             window.openTab('character'); 
             window.updatePetDisplay(); // This will call applyActivePetStats
             window.applyActivePetStats(); // Explicitly call after loading/starting to ensure stats are correct
+            updateTotalDistanceDisplay(); // Display initial total distance
+            const travelInfoEl = document.getElementById('newTravelInfo');
+            if (travelInfoEl && !gameState.isMoving) { // Set default message if not moving
+                travelInfoEl.textContent = "Ready to adventure!";
+            }
         }
+
+        window.updateTotalDistanceDisplay = function() {
+            const totalDistanceDisplayEl = document.getElementById('totalDistanceDisplay');
+            if (totalDistanceDisplayEl && gameState.character && typeof gameState.character.totalDistanceTraveled !== 'undefined') {
+                const distance = gameState.character.totalDistanceTraveled;
+                if (distance < 1000) {
+                    totalDistanceDisplayEl.textContent = `${distance.toFixed(0)} m`;
+                } else {
+                    totalDistanceDisplayEl.textContent = `${(distance / 1000).toFixed(1)} km`;
+                }
+            } else if (totalDistanceDisplayEl) { // Ensure element exists before setting default text
+                 totalDistanceDisplayEl.textContent = `0 m`; 
+            }
+        };
+
+        window.damagePlayer = function(amount) {
+            if (!gameState.character) return;
+            gameState.character.health = Math.max(0, gameState.character.health - amount);
+            updateCharacterDisplay();
+            addEventLog(`💥 You took ${amount} damage!`);
+            if (gameState.character.health === 0) {
+                addEventLog("💀 You have fallen!");
+                // Future: Implement more complex death mechanics (e.g., respawn, item loss)
+            }
+            saveCharacterData();
+        };
+
+        window.healPlayer = function(amount) {
+            if (!gameState.character) return;
+            gameState.character.health = Math.min(gameState.character.maxHealth, gameState.character.health + amount);
+            updateCharacterDisplay();
+            addEventLog(`💚 You healed for ${amount} health!`);
+            saveCharacterData();
+        };
 
         // Function to update the inventory display
         function updateInventoryDisplay() {
@@ -1877,7 +2048,7 @@
 
             document.getElementById('forgotPasswordLink').addEventListener('click', function(event) {
                 event.preventDefault(); // Prevent default link behavior
-                handlePasswordReset(); 
+                handlePasswordReset();
             });
 
             const tabButtons = document.querySelectorAll('#unifiedUIPanel .tab-button');
@@ -1887,7 +2058,97 @@
                     window.openTab(tabName);
                 });
             });
+            showLoginForm(); // Ensure initial view is login
+
+            // Draggable Unified UI Panel
+            const panel = document.getElementById('unifiedUIPanel');
+            const tabBar = panel.querySelector('.tab-bar');
+
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            tabBar.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                
+                offsetX = e.clientX - panel.offsetLeft;
+                offsetY = e.clientY - panel.offsetTop;
+                
+                tabBar.style.cursor = 'grabbing';
+                panel.style.userSelect = 'none'; 
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+
+                let newLeft = e.clientX - offsetX;
+                let newTop = e.clientY - offsetY;
+
+                const minLeft = 0;
+                const minTop = 0;  
+                const maxLeft = window.innerWidth - tabBar.offsetWidth; 
+                const maxTop = window.innerHeight - tabBar.offsetHeight;
+
+                newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+                newTop = Math.max(minTop, Math.min(newTop, maxTop));
+
+                panel.style.left = newLeft + 'px';
+                panel.style.top = newTop + 'px';
+            }
+
+            function onMouseUp() {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                tabBar.style.cursor = 'grab'; 
+                panel.style.userSelect = '';   
+
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            
+            tabBar.style.cursor = 'grab';
         });
+        
+        window.showRegisterForm = function() {
+            document.getElementById('loginPanelTitle').textContent = '📜 Register New Adventurer 📜';
+            document.getElementById('registrationFields').style.display = 'block';
+            document.getElementById('loginSpecificFields').style.display = 'none';
+            
+            // These fields are inside registrationFields, so they become visible with the parent
+            // document.getElementById('usernameInput').style.display = 'block'; 
+            // document.getElementById('confirmPasswordInput').style.display = 'block';
+            // document.getElementById('spawnLocationInput').style.display = 'block';
+            // document.getElementById('spawnLocationLabel').style.display = 'block';
+
+            document.getElementById('loginButton').style.display = 'none';
+            document.getElementById('switchToRegisterButton').style.display = 'none';
+            
+            document.getElementById('completeRegisterButton').style.display = 'inline-block';
+            document.getElementById('backToLoginButton').style.display = 'inline-block';
+            document.getElementById('authError').textContent = '';
+        }
+
+        window.showLoginForm = function() {
+            document.getElementById('loginPanelTitle').textContent = '🗡️ Enter the Realm 🗡️';
+            document.getElementById('registrationFields').style.display = 'none';
+            document.getElementById('loginSpecificFields').style.display = 'block';
+
+            // These fields are inside registrationFields, so they get hidden with the parent
+            // document.getElementById('usernameInput').style.display = 'none';
+            // document.getElementById('confirmPasswordInput').style.display = 'none';
+            // document.getElementById('spawnLocationInput').style.display = 'none';
+            // document.getElementById('spawnLocationLabel').style.display = 'none';
+
+            document.getElementById('loginButton').style.display = 'inline-block';
+            document.getElementById('switchToRegisterButton').style.display = 'inline-block';
+
+            document.getElementById('completeRegisterButton').style.display = 'none';
+            document.getElementById('backToLoginButton').style.display = 'none';
+            document.getElementById('authError').textContent = '';
+        }
 
         window.openTab = function(tabBaseName) {
            // Hide all tab content
