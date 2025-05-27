@@ -154,17 +154,14 @@
             padding: 15px;
             overflow-y: auto; /* Allow scrolling for content that exceeds panel height */
             flex-grow: 1; /* Allow content to take available space */
-            /* max-height will be implicitly handled by .unified-ui-panel's max-height and flex layout */
         }
 
-        /* Ensure any direct children of tab-content that were previously panel-content divs reset their margins if necessary */
         .tab-content > .panel-content {
-            margin: 0; /* Reset margin if it was part of the old .panel-content styling */
-            padding: 0; /* Reset padding if it was part of the old .panel-content styling */
+            margin: 0; 
+            padding: 0; 
         }
         
-        /* Styling for specific content moved from panels, if needed to override old styles */
-        #characterTabContent .stat-row { /* Example if stat-row needs adjustment in new layout */
+        #characterTabContent .stat-row { 
             /* Add specific overrides if necessary */
         }
         #inventoryTabContent {
@@ -398,6 +395,16 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
+        /* Specific styling for "Use" button in inventory to be less prominent than event choice buttons */
+        #inventoryContent .choice-btn {
+            background: linear-gradient(135deg, #566573, #414a52); /* Darker, less vibrant */
+            padding: 5px 10px; /* Smaller padding */
+            font-size: 0.9em; /* Smaller font */
+        }
+        #inventoryContent .choice-btn:hover {
+            background: linear-gradient(135deg, #414a52, #2c3e50);
+        }
+
 
         .choice-btn:hover {
             background: linear-gradient(135deg, #c0392b, #a93226);
@@ -576,7 +583,7 @@
                     <span class="stat-label">❤️ Health:</span>
                     <span class="stat-value"><span id="healthStat">100</span> / <span id="maxHealthStat">100</span></span>
                 </div>
-                <hr style="border-top: 1px solid #f39c12; margin: 10px 0;"> <!-- Visual separator -->
+                <hr style="border-top: 1px solid #f39c12; margin: 10px 0;"> 
                 <div class="stat-row">
                     <span class="stat-label">🌲 Woodcutting:</span>
                     <span class="stat-value" id="woodcuttingStat">1</span>
@@ -589,10 +596,16 @@
                     <span class="stat-label">🎣 Fishing:</span>
                     <span class="stat-value" id="fishingStat">1</span>
                 </div>
+                <hr style="border-top: 1px solid #f39c12; margin: 10px 0;">
+                <div class="stat-row" style="flex-direction: column; align-items: flex-start;">
+                    <span class="stat-label">Active Effects:</span>
+                    <div id="activeEffectsList" style="font-size: 0.85em; padding-left: 10px; margin-top: 5px;">
+                        <div>None</div> 
+                    </div>
+                </div>
             </div>
             <div id="inventoryTabContent" class="tab-content">
                 <div class="panel-content" id="inventoryContent">
-                <!-- Inventory items will be listed here -->
                 <div class="inventory-item">No items yet.</div>
             </div>
             </div>
@@ -686,7 +699,6 @@
       import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
       // Your web app's Firebase configuration
-      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
       const firebaseConfig = {
         apiKey: "AIzaSyDFuK9Tf89hwAG7L_is8NY00kn-Y44E8Qg",
         authDomain: "fantasy-browser-5de23.firebaseapp.com",
@@ -709,8 +721,8 @@
           signOut,
           sendEmailVerification,
           sendPasswordResetEmail,
-          setPersistence, // Make setPersistence available
-          Auth: { // Nest Persistence constants correctly
+          setPersistence, 
+          Auth: { 
               Persistence: {
                   LOCAL: browserLocalPersistence,
                   SESSION: browserSessionPersistence
@@ -718,18 +730,17 @@
           }
       };
 
-      // Make them accessible globally if needed by other parts of your script
       window.auth = auth;
       window.db = db;
       window.firebase = {
-          saveCharacter: async (characterData) => { // Removed username parameter
+          saveCharacter: async (characterData) => { 
               if (!window.auth.currentUser) {
                   console.error("User not logged in. Cannot save character.");
                   alert("Error: You are not logged in. Cannot save character.");
                   return Promise.reject("User not logged in");
               }
               const uid = window.auth.currentUser.uid;
-              const userDocRef = doc(db, "characters", uid); // Use UID for document ID
+              const userDocRef = doc(db, "characters", uid); 
               try {
                   console.log('Firebase: Attempting to save character:', characterData.name, 'Health:', characterData.health, 'Max Health:', characterData.maxHealth);
                   await setDoc(userDocRef, characterData);
@@ -741,15 +752,13 @@
                   return Promise.reject(error);
               }
           },
-          loadCharacter: async () => { // Removed username parameter
+          loadCharacter: async () => { 
               if (!window.auth.currentUser) {
                   console.error("User not logged in. Cannot load character.");
-                  // No alert here, as this might be called speculatively.
-                  // The calling function (window.loadCharacter) will handle user feedback.
-                  return Promise.resolve(null); // Resolve with null if not logged in
+                  return Promise.resolve(null); 
               }
               const uid = window.auth.currentUser.uid;
-              const userDocRef = doc(db, "characters", uid); // Use UID for document ID
+              const userDocRef = doc(db, "characters", uid); 
               try {
                   const docSnap = await getDoc(userDocRef);
                   if (docSnap.exists()) {
@@ -762,17 +771,15 @@
               } catch (error) {
                   console.error("Error loading character for UID:", uid, error);
                   alert("Error loading character data: " + error.message);
-                  return Promise.resolve(null); // Resolve with null on error
+                  return Promise.resolve(null); 
               }
           },
-          logEvent: async (event) => { // Username parameter removed, assumes UID from auth.currentUser
+          logEvent: async (event) => { 
             if (!window.auth.currentUser) {
                 console.warn("Event log attempted without logged in user.");
                 return;
             }
             const uid = window.auth.currentUser.uid;
-            // This function is not fully implemented to save to Firestore yet.
-            // You might want to save events to a subcollection in the character's document.
             console.log("Event logged for UID (locally, not to Firestore yet):", uid, event);
           }
       };
@@ -782,8 +789,8 @@
         // Game State
         const petImageMapping = {
             'wolf': 'images/wolf.png',
-            'bear': 'images/brown_bear.png',
-            'goblin': 'images/goblin.png',
+            'bear': 'images/brown_bear.png', 
+            'goblin': 'images/goblin.png',   
             'gorilla': 'images/gorilla.png',
             'gryphon': 'images/gryphon.png',
             'minotaur': 'images/minotaur.png'
@@ -793,13 +800,13 @@
             currentUser: null,
             character: null,
             map: null,
-            currentPosition: [51.505, -0.09], // London default
+            currentPosition: [51.505, -0.09], 
             destination: null,
             isMoving: false,
             moveInterval: null,
             characterMarker: null,
             destinationMarker: null,
-            currentTerrainType: 'plains' // Default initial terrain
+            currentTerrainType: 'plains' 
         };
 
         // Event Templates
@@ -853,46 +860,99 @@
                 title: "Forgotten Backpack",
                 description: "You find a dusty old backpack tucked away in a small alcove. It seems to have something inside.",
                 choices: [
-                    { text: "Open it carefully", stat: 'luck', success: "Inside, you find a 'Mystic Compass'!", fail: "It's empty, just cobwebs.", reward: 0, penalty: 0, item: "Mystic Compass" },
+                    { 
+                        text: "Open it carefully", 
+                        stat: 'luck', 
+                        success: "Inside, you find something useful!", 
+                        fail: "It's empty, just cobwebs.", 
+                        reward: 0, 
+                        penalty: 0, 
+                        item: { 
+                            name: "Mystic Compass", 
+                            type: "tool", 
+                            description: "A compass that hums with a faint energy. Might lead to interesting places.", 
+                            effects: {}, 
+                            usable: false, 
+                            quantity: 1 
+                        } 
+                    },
                     { text: "Leave it, might be trapped", stat: null, success: "You decide to leave it undisturbed.", fail: "", reward: 0, penalty: 0 }
                 ]
             },
             {
+                title: "Old Medic's Satchel",
+                description: "You find an old, weathered satchel. It might contain some medical supplies.",
+                choices: [
+                    {
+                        text: "Search the satchel (Luck 5+)",
+                        stat: 'luck',
+                        success: "You found a Health Potion!",
+                        fail: "The satchel is empty or its contents are ruined.",
+                        reward: 0,
+                        penalty: 0,
+                        item: { 
+                            name: "Health Potion", type: "potion", description: "Restores 25 health.",
+                            effects: { health: 25 }, usable: true, quantity: 1
+                        }
+                    },
+                    { text: "Leave it.", stat: null, success: "You leave the satchel untouched.", fail: "", reward: 0, penalty: 0 }
+                ]
+            },
+            {
                 title: "A Lost Creature",
-                description: "You come across a small, lost wolf pup whimpering in the bushes. It looks hungry but wary.",
+                description: "You come across a wild creature. It looks wary.",
                 choices: [
                     {
                         text: "Offer some food and try to befriend it (Luck 7+)",
-                        stat: 'luck', // Requires a luck check
-                        success: "The pup cautiously approaches and accepts your offering. It seems to trust you! You've gained a companion!",
-                        fail: "The pup gets scared and runs away into the undergrowth.",
-                        reward: 0, // No gold reward/penalty
+                        stat: 'luck', 
+                        success: "The creature cautiously approaches and accepts your offering. It seems to trust you!", 
+                        fail: "The creature gets scared and runs away into the undergrowth.", 
+                        reward: 0,
                         penalty: 0,
-                        action: function(character) { // Custom action for success
+                        action: function(character) { 
                             if (!character.pets) character.pets = [];
-                            const petName = "Wolf Pup"; 
+
+                            const availablePetTypes = ['Wolf', 'Bear', 'Goblin'];
+                            const randomType = availablePetTypes[Math.floor(Math.random() * availablePetTypes.length)];
+                            let petName = "";
+                            let successMessagePrefix = "A wild";
+
+                            switch (randomType) {
+                                case 'Wolf':
+                                    petName = "Wild Wolf";
+                                    break;
+                                case 'Bear':
+                                    petName = "Young Bear";
+                                    break;
+                                case 'Goblin':
+                                    petName = "Mischievous Goblin";
+                                    break;
+                                default: 
+                                    petName = "Mysterious Creature";
+                                    break;
+                            }
+
                             let variation = null;
                             const rand = Math.random();
-                            if (rand < 0.05) { // 5% chance for shiny
+                            if (rand < 0.05) { 
                                 variation = 'shiny';
-                            } else if (rand < 0.10) { // Next 5% chance for ghost (0.05 to 0.0999...)
+                            } else if (rand < 0.10) { 
                                 variation = 'ghost';
                             }
 
-                            const newPet = { 
-                                id: 'pet_' + Date.now(), // Simple unique ID
-                                type: "Wolf", 
+                            const newPet = {
+                                id: 'pet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                type: randomType,
                                 name: petName,
-        variation: variation, // Add variation property
-        stats: { luck: 0, strength: 0, speed: 0 } // Initialize stats
+                                variation: variation,
+                                stats: { luck: 0, strength: 0, speed: 0 }
                             };
 
-    // Randomly distribute 2 additional stat points
-    const statKeys = ["luck", "strength", "speed"];
-    for (let i = 0; i < 2; i++) {
-        const randomStatKey = statKeys[Math.floor(Math.random() * statKeys.length)];
-        newPet.stats[randomStatKey]++;
-    }
+                            const statKeys = ["luck", "strength", "speed"];
+                            for (let i = 0; i < 2; i++) {
+                                const randomStatKey = statKeys[Math.floor(Math.random() * statKeys.length)];
+                                newPet.stats[randomStatKey]++;
+                            }
 
                             character.pets.push(newPet);
 
@@ -903,10 +963,7 @@
                                 variationText = "[Ghost] ";
                             }
                             
-                            if (variationText) {
-                                return `A wild ${variationText}${newPet.name} has joined you!`;
-                            }
-                            return `You named your new companion ${newPet.name}.`;
+                            return `${successMessagePrefix} ${variationText}${newPet.name} (${newPet.type}) has joined you!`;
                         }
                     },
                     {
@@ -919,7 +976,6 @@
                     }
                 ]
             },
-            // --- WOODCUTTING EVENTS ---
             {
                 title: "Productive Chop",
                 description: "You find a patch of sturdy trees. A good opportunity to gather some wood.",
@@ -931,8 +987,8 @@
                         success: "You expertly chop down a tree and gather some useful Oak Logs.", 
                         fail: "You struggle a bit, but manage to get a few usable pieces of Pine Wood.", 
                         reward: 0, 
-                        item: "Oak Logs", // Success item
-                        failItem: "Pine Wood" // Optional: item on fail
+                        item: {name: "Oak Logs", type: "material", description: "Sturdy logs.", quantity: 1},
+                        failItem: {name: "Pine Wood", type: "material", description: "Common wood.", quantity: 1} 
                     },
                     { 
                         text: "Search for rare Forest Blooms (Luck 5+)", 
@@ -940,7 +996,7 @@
                         success: "Your keen eye spots a rare Forest Bloom hidden amongst the roots!", 
                         fail: "You find nothing but common leaves.", 
                         reward: 0, 
-                        item: "Forest Bloom"
+                        item: {name: "Forest Bloom", type: "component", description: "A vibrant, magical bloom.", quantity: 1}
                     }
                 ]
             },
@@ -955,7 +1011,7 @@
                         success: "You clear the path and find a small bundle of Yew Wood.", 
                         fail: "The thorns are too tough, and you give up.", 
                         reward: 0, 
-                        item: "Yew Wood" 
+                        item: {name: "Yew Wood", type: "material", description: "Flexible, strong wood.", quantity: 1} 
                     },
                      { 
                         text: "Carefully search the edges (Luck 4+)", 
@@ -963,7 +1019,7 @@
                         success: "Poking around, you find some Nightshade Berries.", 
                         fail: "You only find more thorns.", 
                         reward: 0, 
-                        item: "Nightshade Berries" 
+                        item: {name: "Nightshade Berries", type: "component", description: "Poisonous berries.", quantity: 1} 
                     },
                     { 
                         text: "Leave it.", 
@@ -974,7 +1030,6 @@
                     }
                 ]
             },
-            // --- MINING EVENTS ---
             {
                 title: "Ore Vein",
                 description: "You spot a promising glint in a rock face. Could be valuable ore!",
@@ -986,8 +1041,8 @@
                         success: "Your efforts pay off! You extract a good amount of Iron Ore.", 
                         fail: "The rock is tougher than it looks. You only get a few ore fragments.", 
                         reward: 0, 
-                        item: "Iron Ore",
-                        failItem: "Ore Fragments"
+                        item: {name: "Iron Ore", type: "material", description: "A lump of iron.", quantity: 1},
+                        failItem: {name: "Ore Fragments", type: "material", description: "Small pieces of ore.", quantity: 1}
                     },
                     { 
                         text: "Look for Shiny Geodes (Luck 7+)", 
@@ -995,7 +1050,7 @@
                         success: "Tucked away in a crevice, you find a beautiful Shiny Geode!", 
                         fail: "No geodes here, just plain rocks.", 
                         reward: 0, 
-                        item: "Shiny Geode" 
+                        item: {name: "Shiny Geode", type: "valuable", description: "A geode that glitters.", quantity: 1} 
                     }
                 ]
             },
@@ -1010,7 +1065,7 @@
                         success: "You navigate the cavern safely and find a deposit of Coal.", 
                         fail: "A small tremor makes you retreat. Too risky.", 
                         reward: 0, 
-                        item: "Coal" 
+                        item: {name: "Coal", type: "material", description: "A lump of coal.", quantity: 1} 
                     },
                     { 
                         text: "Check for loose gems (Luck 6+)", 
@@ -1018,7 +1073,7 @@
                         success: "Near the entrance, you spot a few Amethyst Shards!", 
                         fail: "It's too dark and unstable to find anything small.", 
                         reward: 0, 
-                        item: "Amethyst Shards" 
+                        item: {name: "Amethyst Shards", type: "valuable", description: "Shards of amethyst.", quantity: 1} 
                     },
                     { 
                         text: "Best not to risk it.", 
@@ -1029,7 +1084,6 @@
                     }
                 ]
             },
-            // --- FISHING EVENTS ---
             {
                 title: "Quiet Fishing Spot",
                 description: "A serene spot by the water. Looks perfect for fishing.",
@@ -1041,8 +1095,8 @@
                         success: "A tug on the line! You reel in a plump River Trout.", 
                         fail: "The fish aren't biting today. You catch nothing but seaweed.", 
                         reward: 0, 
-                        item: "River Trout",
-                        failItem: "Seaweed"
+                        item: {name: "River Trout", type: "food", description: "A freshwater fish.", quantity: 1},
+                        failItem: {name: "Seaweed", type: "material", description: "Slimy seaweed.", quantity: 1}
                     },
                     { 
                         text: "Look for Sunken Treasure (Luck 8+)", 
@@ -1050,7 +1104,7 @@
                         success: "You spot something shimmering beneath the water and retrieve an Old Coin!", 
                         fail: "Just murky water and some old boots.", 
                         reward: 0, 
-                        item: "Old Coin" 
+                        item: {name: "Old Coin", type: "valuable", description: "An ancient coin.", quantity: 1} 
                     }
                 ]
             },
@@ -1065,15 +1119,15 @@
                         success: "Against the odds, you pull out an exotic Moonfin Fish!", 
                         fail: "Something snags your line and breaks it. You lose your bait.", 
                         reward: 0, 
-                        item: "Moonfin Fish" 
+                        item: {name: "Moonfin Fish", type: "food", description: "A rare, glowing fish.", quantity: 1} 
                     },
                      { 
-                        text: "Dredge the bottom (Strength 5+ - Not a real stat yet, using Luck)", // Placeholder for future stat
-                        stat: 'luck', // Using luck as a proxy
+                        text: "Dredge the bottom (Strength 5+ - Not a real stat yet, using Luck)", 
+                        stat: 'luck', 
                         success: "You drag up a barnacle-covered chest containing a Waterlogged Artifact.",
                         fail: "You only manage to stir up mud.",
                         reward: 0,
-                        item: "Waterlogged Artifact"
+                        item: {name: "Waterlogged Artifact", type: "quest_item", description: "A strange artifact from the depths.", quantity: 1}
                     },
                     { 
                         text: "Avoid these strange waters.", 
@@ -1119,6 +1173,109 @@
                         }
                     }
                 ]
+            },
+            {
+                title: "Mysterious Pet Treat",
+                description: "You find a strange, shimmering treat on the ground. It looks like something a pet might enjoy.",
+                choices: [
+                    {
+                        text: "Give it to your active pet.",
+                        stat: null, 
+                        success: "Your pet seems to enjoy the treat!", 
+                        fail: "The treat had no effect, or your pet refused it.",
+                        action: function(character) {
+                            if (!character.activePetId || !character.pets || character.pets.length === 0) {
+                                return "You don't have an active pet to give the treat to.";
+                            }
+                            const activePet = character.pets.find(p => p.id === character.activePetId);
+                            if (!activePet) {
+                                return "Could not find your active pet.";
+                            }
+
+                            const possibleStatsToBoost = ['luck', 'strength', 'speed'];
+                            const statToBoost = possibleStatsToBoost[Math.floor(Math.random() * possibleStatsToBoost.length)];
+                            
+                            activePet.stats[statToBoost] = (activePet.stats[statToBoost] || 0) + 1;
+                            
+                            window.updatePetDisplay(); 
+                            window.applyCharacterStatModifiers();
+
+                            return `Your ${activePet.name}'s ${statToBoost} increased by 1!`;
+                        }
+                    },
+                    {
+                        text: "Leave it.",
+                        stat: null,
+                        success: "You decide to leave the mysterious treat alone.",
+                        fail: "",
+                        reward: 0,
+                        penalty: 0
+                    }
+                ]
+            },
+            {
+                title: "Weakening Sickness",
+                description: "You feel a sudden chill and a wave of weakness washes over you after passing through a dark bog.",
+                choices: [
+                    {
+                        text: "Endure it.",
+                        stat: null,
+                        success: "You feel weakened, but decide to push through.", 
+                        action: function(character) {
+                            if (!character.activeEffects) character.activeEffects = [];
+                            
+                            const isAlreadySick = character.activeEffects.some(effect => effect.description === "Weakening Sickness");
+                            if (isAlreadySick) {
+                                return "You are already feeling unwell; thankfully it doesn't seem to get worse.";
+                            }
+
+                            character.activeEffects.push({
+                                id: 'eff_sickness_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                stat: 'strength', 
+                                amount: -2,       
+                                duration: 20,     
+                                description: "Weakening Sickness"
+                            });
+                            window.applyCharacterStatModifiers(); 
+                            return "A sickness saps some of your strength (-2 Strength for 20 steps).";
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Scavenger's Find",
+                description: "You spot a discarded pile of supplies. Might be something useful there.",
+                choices: [
+                    {
+                        text: "Rummage through the pile (Luck 5+).",
+                        stat: 'luck', 
+                        success: "You managed to find something useful!", 
+                        fail: "The pile contains nothing but junk.",
+                        action: function(character) { 
+                            const possibleItems = [
+                                { name: "Health Potion", type: "potion", description: "Restores 25 health.", effects: { health: 25 }, usable: true, quantity: 1 },
+                                { name: "Bandages", type: "consumable", description: "Restores 10 health.", effects: { health: 10 }, usable: true, quantity: 1 },
+                                { name: "Mystic Compass", type: "tool", description: "A compass that hums with a faint energy.", effects: {}, usable: false, quantity: 1 }
+                            ];
+                            const foundItemTemplate = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+                            
+                            const newItem = {
+                                ...foundItemTemplate,
+                                id: 'item_scav_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+                            };
+
+                            if (!character.inventory) character.inventory = [];
+                            character.inventory.push(newItem);
+                            updateInventoryDisplay(); 
+                            return `You found a ${newItem.name}!`;
+                        }
+                    },
+                    {
+                        text: "Leave it.",
+                        stat: null,
+                        success: "You decide not to risk it."
+                    }
+                ]
             }
         ];
 
@@ -1142,10 +1299,9 @@
         // Initialize map
         function initMap() {
             gameState.map = L.map('map', {
-                zoomControl: false // Remove default zoom controls
+                zoomControl: false 
             }).setView(gameState.currentPosition, 18);
             
-            // Add zoom control to bottom right
             L.control.zoom({
                 position: 'bottomleft'
             }).addTo(gameState.map);
@@ -1154,7 +1310,6 @@
                 attribution: '© OpenStreetMap contributors'
             }).addTo(gameState.map);
 
-            // Add character marker
             const characterIcon = L.divIcon({
                 className: 'character-marker',
                 iconSize: [30, 30]
@@ -1164,7 +1319,6 @@
                 .addTo(gameState.map)
                 .bindPopup("🧙‍♂️ " + gameState.character.name);
 
-            // Handle map clicks
             gameState.map.on('click', function(e) {
                 if (!gameState.isMoving) {
                     setDestination(e.latlng);
@@ -1176,12 +1330,10 @@
         function setDestination(latlng) {
             gameState.destination = [latlng.lat, latlng.lng];
             
-            // Remove old destination marker
             if (gameState.destinationMarker) {
                 gameState.map.removeLayer(gameState.destinationMarker);
             }
             
-            // Add new destination marker
             const destIcon = L.divIcon({
                 className: 'destination-marker',
                 iconSize: [20, 20]
@@ -1196,7 +1348,7 @@
 
         // Calculate distance between two points
         function calculateDistance(pos1, pos2) {
-            const R = 6371000; // Earth's radius in m
+            const R = 6371000; 
             const dLat = (pos2[0] - pos1[0]) * Math.PI / 180;
             const dLon = (pos2[1] - pos1[1]) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -1213,7 +1365,6 @@
             gameState.isMoving = true;
             document.getElementById('travelStatus').style.display = 'block';
             
-            // Store journey data in gameState for resuming
             gameState.journeyData = {
                 startPosition: [...gameState.currentPosition],
                 totalDistance: calculateDistance(gameState.currentPosition, gameState.destination),
@@ -1221,14 +1372,13 @@
                 eventCounter: 0
             };
             
-            const baseSpeed = gameState.character.speed * 2; // Convert to m per step (original speed was km/step, now m/step)
+            const baseSpeed = gameState.character.speed * 2; 
             
             updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
             
             gameState.moveInterval = setInterval(() => {
                 const stepDistance = Math.min(baseSpeed, gameState.journeyData.totalDistance - gameState.journeyData.distanceTraveled);
                 
-                // Calculate new position based on original journey
                 const progress = (gameState.journeyData.distanceTraveled + stepDistance) / gameState.journeyData.totalDistance;
                 const newLat = gameState.journeyData.startPosition[0] + (gameState.destination[0] - gameState.journeyData.startPosition[0]) * progress;
                 const newLng = gameState.journeyData.startPosition[1] + (gameState.destination[1] - gameState.journeyData.startPosition[1]) * progress;
@@ -1238,16 +1388,19 @@
                 
                 updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
                 
-                // Check for events
                 gameState.journeyData.eventCounter++;
-                if (gameState.journeyData.eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
+
+                if (updateActiveEffectsDuration()) { 
+                    window.applyCharacterStatModifiers(); 
+                }
+
+                if (gameState.journeyData.eventCounter >= Math.max(3, Math.floor(20 / (gameState.character.speed || 1))) && Math.random() < 0.4) {
                     gameState.journeyData.eventCounter = 0;
                     pauseMovement();
-                    triggerRandomEvent();
+                    triggerRandomEvent(); 
                     return;
                 }
                 
-                // Check if destination reached
                 if (gameState.journeyData.distanceTraveled >= gameState.journeyData.totalDistance) {
                     completeMovement();
                 }
@@ -1257,9 +1410,27 @@
         // Update travel information display
         function updateTravelInfo(totalDistance, distanceTraveled) {
             const progress = (distanceTraveled / totalDistance) * 100;
-            document.getElementById('travelInfo').textContent = 
-                `Distance: ${distanceTraveled.toFixed(0)}/${totalDistance.toFixed(0)} m`;
+            let travelText = `Distance: ${distanceTraveled.toFixed(0)}/${totalDistance.toFixed(0)} m`;
+            
+            document.getElementById('travelInfo').textContent = travelText;
             document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        // Called during movement to update effect durations
+        function updateActiveEffectsDuration() {
+            if (!gameState.character || !gameState.character.activeEffects || gameState.character.activeEffects.length === 0) return false;
+
+            let effectsChanged = false;
+            for (let i = gameState.character.activeEffects.length - 1; i >= 0; i--) {
+                const effect = gameState.character.activeEffects[i];
+                effect.duration--;
+                if (effect.duration <= 0) {
+                    addEventLog(`The effects of ${effect.description} have worn off.`);
+                    gameState.character.activeEffects.splice(i, 1);
+                    effectsChanged = true;
+                }
+            }
+            return effectsChanged;
         }
 
         // Pause movement (for events)
@@ -1273,12 +1444,11 @@
         // Resume movement after event
         function resumeMovement() {
             if (gameState.isMoving && !gameState.moveInterval && gameState.destination && gameState.journeyData) {
-                const baseSpeed = gameState.character.speed * 2; // Convert to m per step (original speed was km/step, now m/step)
+                const baseSpeed = gameState.character.speed * 2; 
                 
                 gameState.moveInterval = setInterval(() => {
                     const stepDistance = Math.min(baseSpeed, gameState.journeyData.totalDistance - gameState.journeyData.distanceTraveled);
                     
-                    // Calculate new position based on original journey
                     const progress = (gameState.journeyData.distanceTraveled + stepDistance) / gameState.journeyData.totalDistance;
                     const newLat = gameState.journeyData.startPosition[0] + (gameState.destination[0] - gameState.journeyData.startPosition[0]) * progress;
                     const newLng = gameState.journeyData.startPosition[1] + (gameState.destination[1] - gameState.journeyData.startPosition[1]) * progress;
@@ -1288,16 +1458,19 @@
                     
                     updateTravelInfo(gameState.journeyData.totalDistance, gameState.journeyData.distanceTraveled);
                     
-                    // Check for events
                     gameState.journeyData.eventCounter++;
-                    if (gameState.journeyData.eventCounter >= Math.max(3, Math.floor(20 / gameState.character.speed)) && Math.random() < 0.4) {
+
+                    if (updateActiveEffectsDuration()) { 
+                         window.applyCharacterStatModifiers(); 
+                    }
+
+                    if (gameState.journeyData.eventCounter >= Math.max(3, Math.floor(20 / (gameState.character.speed || 1))) && Math.random() < 0.4) {
                         gameState.journeyData.eventCounter = 0;
                         pauseMovement();
-                        triggerRandomEvent();
+                        triggerRandomEvent(); 
                         return;
                     }
                     
-                    // Check if destination reached
                     if (gameState.journeyData.distanceTraveled >= gameState.journeyData.totalDistance) {
                         completeMovement();
                     }
@@ -1310,12 +1483,10 @@
             gameState.isMoving = false;
             pauseMovement();
             
-            // Update current position
             gameState.currentPosition = [...gameState.destination];
             gameState.destination = null;
-            gameState.journeyData = null; // Clear journey data
+            gameState.journeyData = null; 
             
-            // Remove destination marker
             if (gameState.destinationMarker) {
                 gameState.map.removeLayer(gameState.destinationMarker);
                 gameState.destinationMarker = null;
@@ -1338,30 +1509,27 @@
             }
             
             gameState.destination = null;
-            gameState.journeyData = null; // Clear journey data
+            gameState.journeyData = null; 
             document.getElementById('travelStatus').style.display = 'none';
             addEventLog("🛑 Journey cancelled. Ready for a new adventure!");
         };
 
         // Trigger random event
         function triggerRandomEvent() {
-            let currentTerrain = gameState.currentTerrainType || 'plains'; // Default if undefined
+            let currentTerrain = gameState.currentTerrainType || 'plains'; 
             let filteredEvents = eventTemplates.filter(event => {
                 return !event.requiredTerrain || event.requiredTerrain.length === 0 || event.requiredTerrain.includes(currentTerrain);
             });
 
             if (filteredEvents.length === 0) {
-                // Fallback: if no terrain-specific events found, use only generic events
                 filteredEvents = eventTemplates.filter(event => !event.requiredTerrain || event.requiredTerrain.length === 0);
                 if (filteredEvents.length === 0) {
                      console.warn("No suitable events found for terrain:", currentTerrain, "and no generic events available.");
-                     // Optionally, trigger a very basic default event here if desired
-                     // For now, just return to avoid errors if all events somehow require terrain
                      return; 
                 }
             }
             
-            if (filteredEvents.length > 0) { // Ensure there's at least one event to show
+            if (filteredEvents.length > 0) { 
                 const event = filteredEvents[Math.floor(Math.random() * filteredEvents.length)];
                 showEventModal(event);
             } else {
@@ -1393,25 +1561,16 @@
             let result = choice.success;
             let goldChange = choice.reward || 0;
             
-            // Check if choice requires a stat check
-            let successfulOutcome = true; // Assume success initially
+            let successfulOutcome = true; 
             if (choice.stat) {
                 const statValue = gameState.character[choice.stat];
-                // Dynamic difficulty: base 5 + random(0-4) + (skill level / 2 for slight scaling)
-                // For non-skill stats (luck, combat), this /2 will be small or 0 if level is low.
-                // For skills like woodcutting, it allows higher levels to succeed more often.
                 const difficulty = 5 + Math.floor(Math.random() * 5) + Math.floor((statValue || 0) / 2); 
-                const roll = Math.floor(Math.random() * 20) + 1; // d20 roll
+                const roll = Math.floor(Math.random() * 20) + 1; 
                 
-                // Lower roll is better for this example, or higher if you prefer (adjust difficulty logic then)
-                // Let's stick to: roll + statValue >= difficulty for success.
-                // For a more skill-centric check: if statValue itself is low, make it harder.
-                // A simple check: if stat is a skill (e.g. woodcutting) and value is 0 or undefined, treat as very hard.
                 let currentStatValue = statValue || 0;
                 if (['woodcutting', 'mining', 'fishing'].includes(choice.stat) && currentStatValue === 0) {
-                    currentStatValue = -5; // Penalize if skill is 0
+                    currentStatValue = -5; 
                 }
-
 
                 if (roll + currentStatValue < difficulty) {
                     successfulOutcome = false;
@@ -1420,86 +1579,84 @@
                 }
             } else if (choice.goldCost) {
                 if (gameState.character.gold < choice.goldCost) {
-                    successfulOutcome = false; // Can't afford
+                    successfulOutcome = false; 
                     result = "You don't have enough gold!";
                     goldChange = 0;
-                } else {
-                    // Gold cost is handled after applying gold changes
                 }
             }
             
-            // Apply gold changes (penalties or costs)
-            // Rewards are typically part of the item or a separate 'reward' field for successful outcomes.
-            if (choice.goldCost && successfulOutcome) { // Apply cost only if choice was possible and successful
+            if (choice.goldCost && successfulOutcome) { 
                  gameState.character.gold -= choice.goldCost;
-                 goldChange = 0; // Reset goldChange as it was a cost, not a penalty from failure
-            } else if (goldChange !== 0) { // This handles penalties from failed stat checks
+                 goldChange = 0; 
+            } else if (goldChange !== 0) { 
                  gameState.character.gold = Math.max(0, gameState.character.gold + goldChange);
             }
-             updateCharacterDisplay(); // Update display after gold changes
             
-            // Apply stat bonuses (only on success)
             if (choice.statBonus && successfulOutcome) {
                 Object.keys(choice.statBonus).forEach(stat => {
-                    gameState.character[stat] = (gameState.character[stat] || 0) + choice.statBonus[stat];
+                    gameState.character.baseStats[stat] = (gameState.character.baseStats[stat] || 0) + choice.statBonus[stat]; 
                 });
-                updateCharacterDisplay();
             }
 
-            // Check for item grant
-            let itemObtained = null;
-            if (successfulOutcome && choice.item) {
-                itemObtained = choice.item;
-            } else if (!successfulOutcome && choice.failItem) {
-                itemObtained = choice.failItem;
+            let itemObjectToGrant = null;
+            let itemNameObtained = null; 
+
+            if (successfulOutcome && choice.item && typeof choice.item === 'object' && !choice.action) { 
+                itemObjectToGrant = { 
+                    ...choice.item, 
+                    id: 'item_direct_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    quantity: choice.item.quantity || 1
+                };
+                itemNameObtained = choice.item.name;
+            } else if (!successfulOutcome && choice.failItem && typeof choice.failItem === 'object' && !choice.action) {
+                 itemObjectToGrant = {
+                    ...choice.failItem,
+                    id: 'item_fail_direct_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    quantity: choice.failItem.quantity || 1
+                };
+                itemNameObtained = choice.failItem.name;
+            }
+             else if (successfulOutcome && typeof choice.item === 'string' && !choice.action) { 
+                console.warn("Legacy string item grant used for:", choice.item); 
+                itemObjectToGrant = { id: 'item_legacy_str_' + Date.now()  + '_' + Math.random().toString(36).substr(2, 9), name: choice.item, type: "misc", description: "An item.", effects: {}, usable: false, quantity: 1 };
+                itemNameObtained = choice.item;
             }
 
-            if (itemObtained) {
-                if (!gameState.character.inventory) { 
-                    gameState.character.inventory = [];
-                }
-                gameState.character.inventory.push(itemObtained);
-                updateInventoryDisplay(); 
-                // Append to result message
-                if (successfulOutcome) {
-                     result += ` You obtained: ${itemObtained}!`;
-                } else {
-                    // If there's a specific fail message, it's already set. 
-                    // If fail message is generic, append item info.
-                    if (choice.fail === "Nothing happens." || !choice.fail) {
-                         result = `You failed, but found ${itemObtained}.`;
-                    } else {
-                         result += ` You obtained: ${itemObtained}.`;
+            let actionMessage = "";
+            if (successfulOutcome) { 
+                if (typeof choice.action === 'function') {
+                    const actionResult = choice.action(gameState.character); 
+                    if (actionResult) { 
+                        actionMessage = " " + actionResult; 
                     }
                 }
             }
             
-            // Handle custom action for successful choices (like acquiring a pet)
-            let actionMessage = "";
-            if (result === choice.success) { // Check if the outcome was the defined success message for this choice
-                if (typeof choice.action === 'function') {
-                    const petMessage = choice.action(gameState.character);
-                    if (petMessage) {
-                        actionMessage = " " + petMessage; // Add a space before appending
-                    }
-                }
-                // The pet should be added, now update pet display if the tab exists
-                // This function doesn't exist yet, but we're preparing for it.
-                // if (document.getElementById('petsTabContent')) { 
-                //    if (typeof updatePetDisplay === 'function') updatePetDisplay();
-                // }
+            if (itemObjectToGrant) {
+                 if (!gameState.character.inventory) gameState.character.inventory = [];
+                 gameState.character.inventory.push(itemObjectToGrant);
+                 updateInventoryDisplay();
+                 if (successfulOutcome) {
+                     result += ` You obtained: ${itemNameObtained}!`;
+                 } else { 
+                     if (!choice.fail) { 
+                        result = `You failed, but found ${itemNameObtained}.`;
+                     } else { 
+                        result += ` You obtained: ${itemNameObtained}.`;
+                     }
+                 }
             }
-            result += actionMessage; // Append action message to the overall result
+
+            result += actionMessage; 
             
             addEventLog(`⚔️ ${event.title}: ${result}`);
             document.getElementById('eventModal').style.display = 'none';
             
+            window.applyCharacterStatModifiers(); 
             saveCharacterData();
 
-            // Call updatePetDisplay here after a pet might have been added.
-            // This function will be created in the next step.
             if (typeof window.updatePetDisplay === 'function') {
-                window.updatePetDisplay();
+                window.updatePetDisplay(); 
             }
             
             if (gameState.isMoving) {
@@ -1516,7 +1673,6 @@
             logContainer.appendChild(entry);
             logContainer.scrollTop = logContainer.scrollHeight;
             
-            // Keep only last 10 entries
             while (logContainer.children.length > 10) {
                 logContainer.removeChild(logContainer.firstChild);
             }
@@ -1524,16 +1680,16 @@
 
         // Update character display
         function updateCharacterDisplay() {
+            if (!gameState.character) return;
             document.getElementById('characterName').textContent = gameState.character.name;
             document.getElementById('speedStat').textContent = gameState.character.speed;
             document.getElementById('combatStat').textContent = gameState.character.combat;
             document.getElementById('magicStat').textContent = gameState.character.magic;
             document.getElementById('luckStat').textContent = gameState.character.luck;
-            document.getElementById('strengthStat').textContent = gameState.character.strength || 0; // Display strength
+            document.getElementById('strengthStat').textContent = gameState.character.strength || 0; 
             document.getElementById('goldStat').textContent = gameState.character.gold;
             document.getElementById('healthStat').textContent = gameState.character.health;
             document.getElementById('maxHealthStat').textContent = gameState.character.maxHealth;
-            // Update new skill displays
             document.getElementById('woodcuttingStat').textContent = gameState.character.woodcutting;
             document.getElementById('miningStat').textContent = gameState.character.mining;
             document.getElementById('fishingStat').textContent = gameState.character.fishing;
@@ -1541,11 +1697,8 @@
 
         // Save character data
         async function saveCharacterData() {
-            // gameState.currentUser should now be the UID after login/creation
             if (window.auth.currentUser && gameState.character) {
                 gameState.character.position = gameState.currentPosition;
-                console.log('Saving character data. Health:', gameState.character.health, 'Max Health:', gameState.character.maxHealth);
-                // The username/UID is handled by firebase.saveCharacter internally now
                 await window.firebase.saveCharacter(gameState.character);
             } else {
                 console.warn("saveCharacterData: No current user or character data to save.");
@@ -1560,139 +1713,133 @@
             const password = document.getElementById('passwordInput').value;
             const confirmPassword = document.getElementById('confirmPasswordInput').value;
 
-            if (!username) {
-                alert('Please enter an adventurer name!');
-                return;
-            }
-            if (!email) {
-                alert('Please enter an email!');
-                return;
-            }
-            if (!email.includes('@')) {
-                alert('Please enter a valid email address!');
-                return;
-            }
-            if (!password) {
-                alert('Please enter a password!');
-                return;
-            }
-            if (password !== confirmPassword) {
-                alert('Passwords do not match!');
+            if (!username || !email || !password || password !== confirmPassword || !email.includes('@')) {
+                alert('Please fill all fields correctly. Passwords must match and email must be valid.');
                 return;
             }
 
             try {
                 const userCredential = await window.firebaseAuthFunctions.createUserWithEmailAndPassword(auth, email, password);
-                gameState.currentUser = userCredential.user.uid; // Set UID
+                gameState.currentUser = userCredential.user.uid; 
                 console.log("User account created with UID:", gameState.currentUser);
 
-                // Proceed with existing character creation logic
                 const spawnInputOriginal = document.getElementById('spawnLocationInput').value.trim();
-            const spawnInput = spawnInputOriginal.toLowerCase();
+                const spawnInput = spawnInputOriginal.toLowerCase();
             
-            let startPosition;
-            let spawnMessage = "";
-            let determinedTerrain = 'plains'; // Default terrain
+                let startPosition;
+                let spawnMessage = "";
+                let determinedTerrain = 'plains'; 
 
-            const predefinedLocations = {
-                "london": { coords: [51.505, -0.09], terrain: 'urban' },
-                "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
-                "dragon's peak": { coords: [51.480, -0.050], terrain: 'mountains' },
-                "serene coastline": { coords: [51.500, -0.150], terrain: 'coastline' }
-            };
+                const predefinedLocations = {
+                    "london": { coords: [51.505, -0.09], terrain: 'urban' },
+                    "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
+                    "dragon's peak": { coords: [51.480, -0.050], terrain: 'mountains' },
+                    "serene coastline": { coords: [51.500, -0.150], terrain: 'coastline' }
+                };
 
-            const randomSpawn = () => {
-                return [
-                    parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
-                    parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
-                ];
-            };
+                const randomSpawn = () => {
+                    return [
+                        parseFloat((Math.random() * (51.55 - 51.45) + 51.45).toFixed(5)),
+                        parseFloat((Math.random() * (-0.04 - (-0.14)) + (-0.14)).toFixed(5))
+                    ];
+                };
 
-            if (predefinedLocations[spawnInput]) {
-                startPosition = predefinedLocations[spawnInput].coords;
-                determinedTerrain = predefinedLocations[spawnInput].terrain;
-                spawnMessage = `Spawning you in ${spawnInputOriginal} (${determinedTerrain}).`;
-            } else if (spawnInput === "random" || spawnInput === "") {
-                startPosition = randomSpawn();
-                determinedTerrain = 'plains'; // Default for random
-                spawnMessage = "Spawning you at a random location (plains).";
-            } else {
-                // Try geocoding
-                try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(spawnInputOriginal)}&limit=1`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data && data.length > 0 && data[0].lat && data[0].lon) {
-                            startPosition = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                            // For geocoded locations, we don't have explicit terrain type yet from Nominatim.
-                            // We could try to infer based on keywords in address or default.
-                            determinedTerrain = 'plains'; // Default for geocoded for now
-                            spawnMessage = `Successfully found coordinates for '${spawnInputOriginal}'. Spawning you there (assumed plains).`;
+                if (predefinedLocations[spawnInput]) {
+                    startPosition = predefinedLocations[spawnInput].coords;
+                    determinedTerrain = predefinedLocations[spawnInput].terrain;
+                    spawnMessage = `Spawning you in ${spawnInputOriginal} (${determinedTerrain}).`;
+                } else if (spawnInput === "random" || spawnInput === "") {
+                    startPosition = randomSpawn();
+                    determinedTerrain = 'plains'; 
+                    spawnMessage = "Spawning you at a random location (plains).";
+                } else {
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(spawnInputOriginal)}&limit=1`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && data.length > 0 && data[0].lat && data[0].lon) {
+                                startPosition = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                                determinedTerrain = 'plains'; 
+                                spawnMessage = `Successfully found coordinates for '${spawnInputOriginal}'. Spawning you there (assumed plains).`;
+                            } else {
+                                startPosition = randomSpawn();
+                                determinedTerrain = 'plains';
+                                spawnMessage = `Could not find coordinates for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead.`;
+                            }
                         } else {
                             startPosition = randomSpawn();
                             determinedTerrain = 'plains';
-                            spawnMessage = `Could not find coordinates for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Internet connection is required for address lookup.`;
+                            spawnMessage = `Error looking up '${spawnInputOriginal}'. Spawning you at a random location (plains) instead.`;
                         }
-                    } else {
+                    } catch (error) {
+                        console.error("Geocoding error:", error);
                         startPosition = randomSpawn();
                         determinedTerrain = 'plains';
-                        spawnMessage = `Error looking up '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Internet connection may be required.`;
+                        spawnMessage = `Error during address lookup. Spawning you at a random location (plains) instead.`;
                     }
-                } catch (error) {
-                    console.error("Geocoding error:", error);
-                    startPosition = randomSpawn();
-                    determinedTerrain = 'plains';
-                    spawnMessage = `Error during address lookup for '${spawnInputOriginal}'. Spawning you at a random location (plains) instead. Please check your internet connection.`;
                 }
-            }
             
-            gameState.currentTerrainType = determinedTerrain; // Set the determined terrain
+                gameState.currentTerrainType = determinedTerrain; 
 
-            gameState.character = {
-                name: username,
-                speed: 8 + Math.floor(Math.random() * 5),
-                combat: 8 + Math.floor(Math.random() * 5),
-                magic: 8 + Math.floor(Math.random() * 5),
-                luck: 8 + Math.floor(Math.random() * 5),
-                strength: 0, // Initialize player strength
-                health: 100,
-                maxHealth: 100,
-                gold: 50,
-                position: startPosition, // Use the chosen/random position
-                inventory: [], 
-                pets: [], 
-                woodcutting: 1, // New skill
-                mining: 1,      // New skill
-                fishing: 1      // New skill
-            };
-            // Store base stats
-            gameState.character.baseStats = {
-                speed: gameState.character.speed,
-                combat: gameState.character.combat,
-                magic: gameState.character.magic,
-                luck: gameState.character.luck,
-                strength: gameState.character.strength
-            };
-            gameState.character.activePetId = null; // Initialize activePetId
+                gameState.character = {
+                    name: username,
+                    speed: 8 + Math.floor(Math.random() * 5),
+                    combat: 8 + Math.floor(Math.random() * 5),
+                    magic: 8 + Math.floor(Math.random() * 5),
+                    luck: 8 + Math.floor(Math.random() * 5),
+                    strength: 0, 
+                    health: 100,
+                    maxHealth: 100,
+                    gold: 50,
+                    position: startPosition, 
+                    inventory: [], 
+                    pets: [], 
+                    activeEffects: [], 
+                    woodcutting: 1, 
+                    mining: 1,      
+                    fishing: 1      
+                };
+                
+                gameState.character.inventory.push({
+                    id: 'item_hp_create_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    name: "Health Potion",
+                    type: "potion",
+                    description: "Restores 25 health.",
+                    effects: { health: 25 },
+                    usable: true,
+                    quantity: 1
+                });
             
-            gameState.currentPosition = gameState.character.position;
+                gameState.character.baseStats = {
+                    speed: gameState.character.speed,
+                    combat: gameState.character.combat,
+                    magic: gameState.character.magic,
+                    luck: gameState.character.luck,
+                    strength: gameState.character.strength,
+                    maxHealth: gameState.character.maxHealth, 
+                    woodcutting: gameState.character.woodcutting,
+                    mining: gameState.character.mining,
+                    fishing: gameState.character.fishing
+                };
+                gameState.character.activePetId = null; 
             
-            await saveCharacterData(); // This will use the UID from auth.currentUser via firebase.saveCharacter
-            addEventLog(spawnMessage);
+                gameState.currentPosition = gameState.character.position;
+            
+                await saveCharacterData(); 
+                addEventLog(spawnMessage);
 
-            try {
-                await window.firebaseAuthFunctions.sendEmailVerification(auth.currentUser);
-                document.getElementById('authError').textContent = 'Registration successful! A verification email has been sent to your email address. Please verify your email before logging in next time.';
-            } catch (verificationError) {
-                console.error("Error sending verification email:", verificationError);
-                document.getElementById('authError').textContent = 'Registration successful, but failed to send verification email. You can request another one later. ' + verificationError.message;
-            }
+                try {
+                    await window.firebaseAuthFunctions.sendEmailVerification(auth.currentUser);
+                    document.getElementById('authError').textContent = 'Registration successful! Verification email sent.';
+                } catch (verificationError) {
+                    console.error("Error sending verification email:", verificationError);
+                    document.getElementById('authError').textContent = 'Registration successful, but failed to send verification email.';
+                }
 
-            startGame();
+                startGame();
 
             } catch (error) {
                 console.error("Error creating account:", error);
-                console.log("Full error object during registration:", error); // Add this line
                 handleAuthError(error, 'authError');
             }
         };
@@ -1705,40 +1852,62 @@
             const rememberMe = document.getElementById('rememberMeCheckbox').checked;
             console.log("Remember me checked: " + rememberMe);
 
-            // Future: Implement Firebase persistence based on rememberMe state
-            // For now, this console.log is the main requirement.
-            // Example of how persistence would be set (before signInWithEmailAndPassword):
-            // const persistenceToSet = rememberMe ? window.firebaseAuthFunctions.Auth.Persistence.LOCAL : window.firebaseAuthFunctions.Auth.Persistence.SESSION;
-            // try {
-            //     await window.firebaseAuthFunctions.setPersistence(auth, persistenceToSet);
-            //     console.log("Firebase persistence set to: " + (rememberMe ? "LOCAL" : "SESSION"));
-            // } catch (error) {
-            //     console.error("Error setting Firebase persistence:", error);
-            //     // Handle error appropriately, maybe alert user or log
-            // }
-
-
-            if (!email) {
-                alert('Please enter your email!');
-                return;
-            }
-            if (!password) {
-                alert('Please enter your password!');
+            if (!email || !password) {
+                alert('Please enter your email and password!');
                 return;
             }
 
             try {
                 const userCredential = await window.firebaseAuthFunctions.signInWithEmailAndPassword(auth, email, password);
-                gameState.currentUser = userCredential.user.uid; // Set UID
+                gameState.currentUser = userCredential.user.uid; 
                 console.log("User signed in with UID:", gameState.currentUser);
 
-                // Now load character data using the UID (firebase.loadCharacter uses UID internally)
                 const characterData = await window.firebase.loadCharacter(); 
 
                 if (characterData) {
                     console.log('Loaded character data. Raw health:', characterData.health, 'Raw maxHealth:', characterData.maxHealth);
-                    // Ensure inventory is initialized
-                    if (!characterData.inventory) characterData.inventory = [];
+                    
+                    if (!characterData.inventory) {
+                        characterData.inventory = [];
+                        characterData.inventory.push({
+                            id: 'item_hp_load_init_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                            name: "Health Potion", type: "potion", description: "Restores 25 health.",
+                            effects: { health: 25 }, usable: true, quantity: 1
+                        });
+                    } else {
+                        characterData.inventory = characterData.inventory.map(item => {
+                            if (typeof item === 'string') {
+                                if (item === "Mystic Compass") {
+                                    return {
+                                        id: 'item_mc_migrated_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                        name: "Mystic Compass", type: "tool", description: "Helps navigate mysterious places.",
+                                        effects: {}, usable: false, quantity: 1
+                                    };
+                                }
+                                return { 
+                                    id: 'item_str_migrated_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                    name: item, type: "unknown", description: "An old item.",
+                                    effects: {}, usable: false, quantity: 1
+                                };
+                            }
+                            if (!item.id) item.id = 'item_obj_migrated_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                            if (item.quantity === undefined) item.quantity = 1;
+                            if (item.usable === undefined) item.usable = (item.name === "Health Potion");
+                            if (!item.type) item.type = (item.name === "Health Potion") ? "potion" : "misc";
+                            if (!item.description) item.description = (item.name === "Health Potion") ? "Restores some health." : "An item.";
+                            if (!item.effects) item.effects = (item.name === "Health Potion") ? { health: 25 } : {};
+                            return item;
+                        });
+                        const hasHealthPotion = characterData.inventory.some(item => item.name === "Health Potion" && typeof item === 'object');
+                        if (!hasHealthPotion) {
+                            characterData.inventory.push({
+                                id: 'item_hp_load_ensure_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                name: "Health Potion", type: "potion", description: "Restores 25 health.",
+                                effects: { health: 25 }, usable: true, quantity: 1
+                            });
+                        }
+                    }
+
                     if (!characterData.pets) characterData.pets = [];
                     else {
                         characterData.pets.forEach(pet => {
@@ -1748,44 +1917,36 @@
                     if (characterData.woodcutting === undefined) characterData.woodcutting = 1;
                     if (characterData.mining === undefined) characterData.mining = 1;
                     if (characterData.fishing === undefined) characterData.fishing = 1;
-                    characterData.strength = characterData.strength || 0; // Ensure strength exists
+                    characterData.strength = characterData.strength || 0; 
+                    if (!characterData.activeEffects) characterData.activeEffects = []; 
                     
-                    // Ensure health and maxHealth, defaulting if not present
-                    if (typeof characterData.health === 'undefined') {
-                        characterData.health = 100;
-                    }
-                    if (typeof characterData.maxHealth === 'undefined') {
-                        characterData.maxHealth = 100;
-                    }
+                    if (typeof characterData.health === 'undefined') characterData.health = 100;
+                    if (typeof characterData.maxHealth === 'undefined') characterData.maxHealth = 100;
                     
-                    gameState.character = characterData; // Assign before logging default-applied values
+                    gameState.character = characterData; 
                     console.log('Character data after defaulting. Health:', gameState.character.health, 'Max Health:', gameState.character.maxHealth);
 
-
-                    // Ensure baseStats exist, create if not (for older characters)
                     if (!characterData.baseStats) {
                         characterData.baseStats = {
-                            speed: characterData.speed,
-                            combat: characterData.combat,
-                            magic: characterData.magic,
-                            luck: characterData.luck,
-                            strength: characterData.strength 
+                            speed: characterData.speed, combat: characterData.combat, magic: characterData.magic,
+                            luck: characterData.luck, strength: characterData.strength, maxHealth: characterData.maxHealth,
+                            woodcutting: characterData.woodcutting, mining: characterData.mining, fishing: characterData.fishing
                         };
                     }
-                     // Ensure baseStats includes strength if it was added later
-                    if (characterData.baseStats.strength === undefined) {
+                     if (characterData.baseStats.strength === undefined) {
                         characterData.baseStats.strength = characterData.strength || 0;
                     }
-                    // gameState.character = characterData; // Already assigned above for logging
-                    gameState.character.activePetId = characterData.activePetId || null; // Load activePetId or default to null
-                    gameState.currentPosition = characterData.position || [51.505, -0.09]; // Default if no position saved
+                    if (characterData.baseStats.maxHealth === undefined) {
+                        characterData.baseStats.maxHealth = characterData.maxHealth || 100;
+                    }
+                    
+                    gameState.character.activePetId = characterData.activePetId || null; 
+                    gameState.currentPosition = characterData.position || [51.505, -0.09]; 
                     
                     startGame();
                 } else {
-                    // This case means user authenticated but no character data found for that UID.
-                    document.getElementById('authError').textContent = 'Login successful, but no character data found. Try "Register" to create a new character.';
-                    gameState.currentUser = null; // Clear UID as no character data
-                    // Optionally sign out the user if no character data is found after login
+                    document.getElementById('authError').textContent = 'Login successful, but no character data found.';
+                    gameState.currentUser = null; 
                     await window.firebaseAuthFunctions.signOut(window.auth); 
                     console.log("User signed out as no character data was found.");
                 }
@@ -1798,34 +1959,34 @@
         
         function handleAuthError(error, errorElementId) {
             const errorDiv = document.getElementById(errorElementId);
-            if (!errorDiv) return; // Should not happen if ID is correct
+            if (!errorDiv) return; 
 
-            console.error("Auth Error Code:", error.code); // Log the error code for debugging
+            console.error("Auth Error Code:", error.code); 
 
             switch (error.code) {
                 case 'auth/email-already-in-use':
-                    errorDiv.textContent = 'This email address is already in use. Please try logging in or use a different email.';
+                    errorDiv.textContent = 'This email address is already in use.';
                     break;
                 case 'auth/invalid-email':
-                    errorDiv.textContent = 'The email address is not valid. Please check the format.';
+                    errorDiv.textContent = 'The email address is not valid.';
                     break;
                 case 'auth/weak-password':
-                    errorDiv.textContent = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+                    errorDiv.textContent = 'The password is too weak (at least 6 characters).';
                     break;
                 case 'auth/user-not-found':
-                    errorDiv.textContent = 'No account found with this email address. Please check your email or register for a new account.';
+                    errorDiv.textContent = 'No account found with this email.';
                     break;
                 case 'auth/wrong-password':
-                    errorDiv.textContent = 'Incorrect password. Please try again.';
+                    errorDiv.textContent = 'Incorrect password.';
                     break;
                 case 'auth/too-many-requests':
-                    errorDiv.textContent = 'Too many login attempts. Please try again later or reset your password.';
+                    errorDiv.textContent = 'Too many login attempts. Try again later or reset password.';
                     break;
                 case 'auth/operation-not-allowed':
-                    errorDiv.textContent = 'Email/Password sign-in is not enabled for this project. Please enable it in the Firebase console (Authentication > Sign-in method).';
+                    errorDiv.textContent = 'Email/Password sign-in is not enabled.';
                     break;
                 default:
-                    errorDiv.textContent = 'An unexpected error occurred during authentication. Please try again.'; // Generic message for unknown errors
+                    errorDiv.textContent = 'Authentication error. Please try again.'; 
                     break;
             }
         }
@@ -1837,32 +1998,26 @@
                 gameState.currentUser = null;
                 gameState.character = null;
                 
-                // Reset map if it exists
                 if (gameState.map) {
                     gameState.map.remove();
                     gameState.map = null;
                 }
-                // Clear markers
                 gameState.characterMarker = null;
                 gameState.destinationMarker = null;
-                // Clear other game state if necessary, e.g., travel status
                 if (gameState.moveInterval) clearInterval(gameState.moveInterval);
                 gameState.isMoving = false;
                 gameState.destination = null;
                 gameState.journeyData = null;
                 document.getElementById('travelStatus').style.display = 'none';
 
-
                 document.getElementById('loginPanel').style.display = 'block';
                 document.getElementById('gameContainer').style.display = 'none';
                 
                 const logContainer = document.getElementById('eventLogContent');
-                if (logContainer) logContainer.innerHTML = ''; // Clear previous logs
+                if (logContainer) logContainer.innerHTML = ''; 
                 addEventLog("🚪 You have been successfully logged out. See you next time, adventurer!");
-                // Reset username input field
                 const usernameInput = document.getElementById('usernameInput');
                 if(usernameInput) usernameInput.value = '';
-
 
             } catch (error) {
                 console.error("Error signing out:", error);
@@ -1874,10 +2029,9 @@
         function startGame() {
             if (!window.auth.currentUser || !gameState.character) {
                 alert("Error: Not properly logged in or character data missing. Please log in again.");
-                // Ensure UI is reset to login state
                 document.getElementById('loginPanel').style.display = 'block';
                 document.getElementById('gameContainer').style.display = 'none';
-                if (gameState.map) { // Clean up map if it exists
+                if (gameState.map) { 
                     gameState.map.remove();
                     gameState.map = null;
                 }
@@ -1885,35 +2039,27 @@
             }
 
             document.getElementById('loginPanel').style.display = 'none';
-            document.getElementById('gameContainer').style.display = 'flex'; // Or 'block' based on your CSS for gameContainer
+            document.getElementById('gameContainer').style.display = 'flex'; 
             
-            updateCharacterDisplay();
+            window.applyCharacterStatModifiers(); 
             
-            // Initialize or update map
             if (!gameState.map) {
-                initMap(); // This function should set gameState.map
+                initMap(); 
             } else {
-                 // If map exists, ensure character marker is updated or created
                 if (gameState.characterMarker) {
                     gameState.characterMarker.setLatLng(gameState.currentPosition).bindPopup("🧙‍♂️ " + gameState.character.name);
-                } else { // This might happen if map existed but marker didn't, or if initMap needs to be more robust
+                } else { 
                     const characterIcon = L.divIcon({ className: 'character-marker', iconSize: [30, 30] });
                     gameState.characterMarker = L.marker(gameState.currentPosition, { icon: characterIcon })
                         .addTo(gameState.map)
                         .bindPopup("🧙‍♂️ " + gameState.character.name);
                 }
-                gameState.map.setView(gameState.currentPosition, gameState.map.getZoom() || 18); // Ensure map is centered
+                gameState.map.setView(gameState.currentPosition, gameState.map.getZoom() || 18); 
             }
 
-            // Set currentTerrainType (this logic seems okay, but ensure predefinedLocations is accessible)
-            // Assuming predefinedLocations is defined globally or passed appropriately.
-            // For safety, ensure it's defined, or this block might error.
-            // const predefinedLocations = { /* ... as defined elsewhere ... */ };
             if (!gameState.currentTerrainType || gameState.currentTerrainType === 'plains') { 
                 const pos = gameState.currentPosition;
                 let foundKnownLocation = false;
-                // Ensure predefinedLocations is available in this scope
-                // This might need to be moved or passed if it's not globally available from the other script block
                 const predefinedLocations = {
                     "london": { coords: [51.505, -0.09], terrain: 'urban' },
                     "whispering forest": { coords: [51.520, -0.100], terrain: 'forest' },
@@ -1938,18 +2084,16 @@
             addEventLog(`🌟 Welcome, ${gameState.character.name}! Your current terrain is ${gameState.currentTerrainType}. Your adventure begins/continues...`);
             updateInventoryDisplay(); 
             window.openTab('character'); 
-            window.updatePetDisplay(); // This will call applyActivePetStats
-            window.applyActivePetStats(); // Explicitly call after loading/starting to ensure stats are correct
+            window.updatePetDisplay(); 
         }
 
         window.damagePlayer = function(amount) {
             if (!gameState.character) return;
             gameState.character.health = Math.max(0, gameState.character.health - amount);
-            updateCharacterDisplay();
+            updateCharacterDisplay(); 
             addEventLog(`💥 You took ${amount} damage!`);
             if (gameState.character.health === 0) {
                 addEventLog("💀 You have fallen!");
-                // Future: Implement more complex death mechanics (e.g., respawn, item loss)
             }
             saveCharacterData();
         };
@@ -1957,42 +2101,118 @@
         window.healPlayer = function(amount) {
             if (!gameState.character) return;
             gameState.character.health = Math.min(gameState.character.maxHealth, gameState.character.health + amount);
-            updateCharacterDisplay();
+            updateCharacterDisplay(); 
             addEventLog(`💚 You healed for ${amount} health!`);
             saveCharacterData();
         };
 
-        // Function to update the inventory display
         function updateInventoryDisplay() {
             const inventoryContent = document.getElementById('inventoryContent');
-            if (!inventoryContent) { // Add a guard clause in case this is called before the element is in the new tab
-                console.warn("updateInventoryDisplay called but inventoryContent not found");
+            if (!inventoryContent) {
+                console.warn("updateInventoryDisplay called but inventoryContent (target for items) not found.");
                 return;
             }
-            inventoryContent.innerHTML = ''; // Clear current display
+            inventoryContent.innerHTML = ''; 
 
             if (gameState.character && gameState.character.inventory && gameState.character.inventory.length > 0) {
                 gameState.character.inventory.forEach(item => {
+                    if (typeof item !== 'object' || item === null) { 
+                        console.warn("Invalid item found in inventory:", item);
+                        return; 
+                    }
+
                     const itemDiv = document.createElement('div');
-                    itemDiv.className = 'inventory-item';
-                    // Assuming item is a string for now. If it's an object, use item.name or similar.
-                    itemDiv.textContent = item; 
+                    itemDiv.className = 'inventory-item'; 
+                    itemDiv.style.display = 'flex'; 
+                    itemDiv.style.justifyContent = 'space-between'; 
+                    itemDiv.style.alignItems = 'center'; 
+                    itemDiv.style.padding = '5px 0'; 
+                    itemDiv.style.borderBottom = '1px solid #444'; 
+
+                    const itemNameSpan = document.createElement('span');
+                    itemNameSpan.textContent = `${item.name} (Qty: ${item.quantity || 1})`;
+                    itemNameSpan.title = item.description || "No description available."; 
+                    itemDiv.appendChild(itemNameSpan);
+
+                    if (item.usable) {
+                        const useButton = document.createElement('button');
+                        useButton.textContent = 'Use';
+                        useButton.style.marginLeft = '10px'; 
+                        useButton.style.padding = '3px 8px'; 
+                        useButton.style.fontSize = '0.9em';
+                        useButton.className = 'choice-btn'; 
+                        useButton.onclick = function() { window.useItem(item.id); }; 
+                        itemDiv.appendChild(useButton);
+                    }
                     inventoryContent.appendChild(itemDiv);
                 });
             } else {
                 const noItemsDiv = document.createElement('div');
-                noItemsDiv.className = 'inventory-item';
-                noItemsDiv.textContent = 'No items yet.';
+                noItemsDiv.className = 'inventory-item'; 
+                noItemsDiv.textContent = 'Your backpack is empty.';
                 inventoryContent.appendChild(noItemsDiv);
             }
         }
 
-        // Initialize game on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Game starts with login panel visible
+        window.useItem = function(itemId) {
+            if (!gameState.character || !gameState.character.inventory) {
+                console.warn("useItem called but character or inventory not found.");
+                return;
+            }
 
+            const itemIndex = gameState.character.inventory.findIndex(item => item && item.id === itemId);
+            if (itemIndex === -1) {
+                console.warn("Attempted to use item not found in inventory with ID:", itemId);
+                addEventLog("Error: Could not find that item.");
+                return;
+            }
+
+            const item = gameState.character.inventory[itemIndex];
+
+            if (!item.usable) {
+                addEventLog(`Cannot use ${item.name}.`);
+                return;
+            }
+
+            let effectApplied = false;
+            let effectMessage = "";
+
+            if (item.effects) {
+                if (item.effects.health) {
+                    const healthBefore = gameState.character.health;
+                    if (healthBefore < gameState.character.maxHealth) {
+                        window.healPlayer(item.effects.health); 
+                        const healthAfter = gameState.character.health;
+                        const healedAmount = healthAfter - healthBefore;
+                        effectMessage = `Restored ${healedAmount} health.`;
+                        effectApplied = true;
+                    } else {
+                        effectMessage = "You are already at full health.";
+                        effectApplied = false; 
+                    }
+                }
+            }
+
+            if (effectApplied) {
+                 item.quantity = (item.quantity || 1) - 1; 
+                 if (item.quantity <= 0) {
+                    gameState.character.inventory.splice(itemIndex, 1); 
+                 }
+                 addEventLog(`Used ${item.name}. ${effectMessage}`);
+            } else if (effectMessage) { 
+                addEventLog(`${item.name} had no effect. ${effectMessage}`);
+            } else {
+                 addEventLog(`You examine ${item.name}, but it has no usable effect right now.`); 
+            }
+            
+            updateInventoryDisplay(); 
+            window.applyCharacterStatModifiers(); 
+            saveCharacterData(); 
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('forgotPasswordLink').addEventListener('click', function(event) {
-                event.preventDefault(); // Prevent default link behavior
+                event.preventDefault(); 
                 handlePasswordReset();
             });
 
@@ -2000,26 +2220,18 @@
             tabButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const tabName = this.getAttribute('data-tab');
-                    window.openTab(tabName);
+                    if (tabName) window.openTab(tabName); 
                 });
             });
-            showLoginForm(); // Ensure initial view is login
+            showLoginForm(); 
         });
         
         window.showRegisterForm = function() {
             document.getElementById('loginPanelTitle').textContent = '📜 Register New Adventurer 📜';
             document.getElementById('registrationFields').style.display = 'block';
             document.getElementById('loginSpecificFields').style.display = 'none';
-            
-            // These fields are inside registrationFields, so they become visible with the parent
-            // document.getElementById('usernameInput').style.display = 'block'; 
-            // document.getElementById('confirmPasswordInput').style.display = 'block';
-            // document.getElementById('spawnLocationInput').style.display = 'block';
-            // document.getElementById('spawnLocationLabel').style.display = 'block';
-
             document.getElementById('loginButton').style.display = 'none';
             document.getElementById('switchToRegisterButton').style.display = 'none';
-            
             document.getElementById('completeRegisterButton').style.display = 'inline-block';
             document.getElementById('backToLoginButton').style.display = 'inline-block';
             document.getElementById('authError').textContent = '';
@@ -2029,66 +2241,56 @@
             document.getElementById('loginPanelTitle').textContent = '🗡️ Enter the Realm 🗡️';
             document.getElementById('registrationFields').style.display = 'none';
             document.getElementById('loginSpecificFields').style.display = 'block';
-
-            // These fields are inside registrationFields, so they get hidden with the parent
-            // document.getElementById('usernameInput').style.display = 'none';
-            // document.getElementById('confirmPasswordInput').style.display = 'none';
-            // document.getElementById('spawnLocationInput').style.display = 'none';
-            // document.getElementById('spawnLocationLabel').style.display = 'none';
-
             document.getElementById('loginButton').style.display = 'inline-block';
             document.getElementById('switchToRegisterButton').style.display = 'inline-block';
-
             document.getElementById('completeRegisterButton').style.display = 'none';
             document.getElementById('backToLoginButton').style.display = 'none';
             document.getElementById('authError').textContent = '';
         }
 
         window.openTab = function(tabBaseName) {
-           // Hide all tab content
-           const tabContents = document.querySelectorAll('#unifiedUIPanel .tab-content'); // Scope query to unified panel
+           const tabContents = document.querySelectorAll('#unifiedUIPanel .tab-content'); 
            tabContents.forEach(content => {
                content.style.display = 'none';
            });
 
-           // Deactivate all tab buttons
-           const tabButtons = document.querySelectorAll('#unifiedUIPanel .tab-button'); // Scope query to unified panel
+           const tabButtons = document.querySelectorAll('#unifiedUIPanel .tab-button'); 
            tabButtons.forEach(button => {
                button.classList.remove('active');
            });
 
-           // Show the selected tab content
            const selectedTabContentId = tabBaseName + "TabContent";
            const selectedTabContent = document.getElementById(selectedTabContentId);
            if (selectedTabContent) {
                selectedTabContent.style.display = 'block';
            }
 
-           // Activate the selected tab button
            const activeButton = document.querySelector(`.tab-button[data-tab='${tabBaseName}']`);
            if (activeButton) {
                activeButton.classList.add('active');
+           }
+           if (tabBaseName === 'character') {
+                updateActiveEffectsDisplay(); 
            }
        }
 
        window.updatePetDisplay = function() {
            const petsContent = document.getElementById('petsTabContent');
-           if (!petsContent) return; // Exit if the pets tab content area isn't found
+           if (!petsContent) return; 
 
-           petsContent.innerHTML = ''; // Clear previous pet list
+           petsContent.innerHTML = ''; 
 
            if (gameState.character && gameState.character.pets && gameState.character.pets.length > 0) {
                const petList = document.createElement('ul');
-               petList.style.listStyleType = 'none'; // Optional: remove bullets
+               petList.style.listStyleType = 'none'; 
                petList.style.padding = '0';
 
                gameState.character.pets.forEach(pet => {
                    const petItem = document.createElement('li');
                    petItem.style.padding = '5px 0';
-                   petItem.style.borderBottom = '1px solid #444'; // Optional: separator
-                   petItem.innerHTML = ''; // Clear previous content to use <img> and text nodes/spans
+                   petItem.style.borderBottom = '1px solid #444'; 
+                   petItem.innerHTML = ''; 
 
-                   // Pet Image
                    const imagePath = petImageMapping[pet.type.toLowerCase()];
                    if (imagePath) {
                        const img = document.createElement('img');
@@ -2096,70 +2298,57 @@
                        img.style.width = '20px';
                        img.style.height = '20px';
                        img.style.marginRight = '8px';
-                       img.style.verticalAlign = 'middle'; // Align image nicely with text
+                       img.style.verticalAlign = 'middle'; 
                        petItem.appendChild(img);
                    } else {
                        const iconSpan = document.createElement('span');
-                       iconSpan.textContent = '❓ '; // Default emoji if no image
+                       iconSpan.textContent = '❓ '; 
                        iconSpan.style.marginRight = '8px';
                        petItem.appendChild(iconSpan);
                    }
 
                    let displayName = pet.name;
-                   petItem.style.color = ''; // Reset color
-                   // Opacity for ghost is better handled on the image or a wrapper if needed, 
-                   // for now, text color will be standard unless shiny.
-                   // petItem.style.opacity = ''; // Reset opacity - not needed if clearing innerHTML
-
+                   petItem.style.color = ''; 
+                   
                    if (pet.variation === 'shiny') {
                        displayName = `[Shiny] ${pet.name}`;
-                       // Apply shiny color to the text span, not the whole li
                    } else if (pet.variation === 'ghost') {
                        displayName = `[Ghost] ${pet.name}`;
-                       // Ghost opacity can be applied to the image if desired, or text span
                    }
                    
-                   let statsText = " - Stats: LCK 0, STR 0, SPD 0"; // Default text
+                   let statsText = " - Stats: LCK 0, STR 0, SPD 0"; 
                    if (pet.stats) {
                        statsText = ` - Stats: LCK ${pet.stats.luck || 0}, STR ${pet.stats.strength || 0}, SPD ${pet.stats.speed || 0}`;
                    }
 
-                   // Text content next to the image
                    const textSpan = document.createElement('span');
                    textSpan.textContent = `${displayName} (${pet.type})${statsText}`;
                    if (pet.variation === 'shiny') {
                        textSpan.style.color = '#FFD700';
                    } else if (pet.variation === 'ghost') {
-                        // Example: apply opacity to text if it's a ghost, or image could be styled too
-                        // For simplicity, we'll just note it in display name.
-                        // To make image semi-transparent: find the img child and set its opacity.
                         const petImageElement = petItem.querySelector('img');
                         if(petImageElement) petImageElement.style.opacity = '0.7';
                    }
                    petItem.appendChild(textSpan);
                    
-                   petItem.style.cursor = 'pointer'; // Make it look clickable
+                   petItem.style.cursor = 'pointer'; 
 
-                   // Visual indication for active pet
                    if (gameState.character && pet.id === gameState.character.activePetId) {
-                       petItem.style.backgroundColor = '#4a5d70'; // Active pet highlight
+                       petItem.style.backgroundColor = '#4a5d70'; 
                    } else {
-                       petItem.style.backgroundColor = ''; // Default background
+                       petItem.style.backgroundColor = ''; 
                    }
 
-                   // Click event listener for pet selection
                    petItem.addEventListener('click', () => {
                        if (gameState.character) {
                            if (gameState.character.activePetId === pet.id) {
-                               gameState.character.activePetId = null; // Deselect if already active
+                               gameState.character.activePetId = null; 
                            } else {
-                               gameState.character.activePetId = pet.id; // Select new pet
+                               gameState.character.activePetId = pet.id; 
                            }
-                           window.updatePetDisplay(); // Refresh display to show selection
-                           if (typeof window.applyActivePetStats === 'function') {
-                               window.applyActivePetStats(); // Apply stat changes (placeholder for now)
-                           }
-                           saveCharacterData(); // Save change in active pet
+                           window.updatePetDisplay(); 
+                           window.applyCharacterStatModifiers(); 
+                           saveCharacterData(); 
                        }
                    });
 
@@ -2182,36 +2371,21 @@
 
             try {
                 await window.firebaseAuthFunctions.sendPasswordResetEmail(auth, email.trim());
-                document.getElementById('authError').textContent = 'If an account exists for ' + email.trim() + ', a password reset email has been sent. Please check your inbox.';
+                document.getElementById('authError').textContent = 'If an account exists for ' + email.trim() + ', a password reset email has been sent.';
             } catch (error) {
                 console.error("Password reset error:", error);
-                // Provide a generic message to avoid disclosing whether an email exists or not.
                 document.getElementById('authError').textContent = 'Error sending password reset email. Please ensure the email is correct or try again later.';
-                // Optionally use the more detailed handler for debugging:
-                // handleAuthError(error, 'authError'); 
             }
         }
 
        window.applyActivePetStats = function() {
-           if (!gameState.character) return;
-
-           // Ensure baseStats are initialized (should be done in create/load character)
-           if (!gameState.character.baseStats) {
-               console.error("baseStats not initialized on character!");
-               // Fallback: Initialize baseStats if somehow missed
-               gameState.character.baseStats = {
-                   speed: gameState.character.speed,
-                   combat: gameState.character.combat, // Combat is not affected by pets in this logic
-                   magic: gameState.character.magic,   // Magic is not affected by pets in this logic
-                   luck: gameState.character.luck,
-                   strength: gameState.character.strength || 0
-               };
+           if (!gameState.character || !gameState.character.baseStats) {
+                console.warn("applyActivePetStats: Character or baseStats not found.");
+                return;
            }
-            // Reset to base stats (only for stats pets can affect)
             gameState.character.luck = gameState.character.baseStats.luck;
             gameState.character.strength = gameState.character.baseStats.strength;
             gameState.character.speed = gameState.character.baseStats.speed;
-            // Note: Combat and Magic are not currently modified by pets in this design.
 
             const activePetId = gameState.character.activePetId;
             if (activePetId && gameState.character.pets) {
@@ -2222,9 +2396,74 @@
                     gameState.character.speed += (activePet.stats.speed || 0);
                 }
             }
-            window.updateCharacterDisplay();
-            // saveCharacterData(); // Already called in updatePetDisplay which calls this, or if called standalone
        };
+
+       window.applyCharacterStatModifiers = function() {
+           if (!gameState.character) return;
+
+           if (!gameState.character.baseStats) {
+               console.error("CRITICAL: baseStats missing on character object. Attempting to reinitialize.");
+               gameState.character.baseStats = { 
+                   speed: gameState.character.speed || 10, combat: gameState.character.combat || 10,
+                   magic: gameState.character.magic || 10, luck: gameState.character.luck || 10,
+                   strength: gameState.character.strength || 0, maxHealth: gameState.character.maxHealth || 100,
+                   woodcutting: gameState.character.woodcutting || 1, mining: gameState.character.mining || 1,
+                   fishing: gameState.character.fishing || 1
+               };
+           }
+
+           Object.keys(gameState.character.baseStats).forEach(statKey => {
+                if (statKey !== 'health') { 
+                   gameState.character[statKey] = gameState.character.baseStats[statKey];
+                }
+           });
+            
+           window.applyActivePetStats(); 
+
+           if (gameState.character.activeEffects && gameState.character.activeEffects.length > 0) {
+               gameState.character.activeEffects.forEach(effect => {
+                   if (gameState.character.hasOwnProperty(effect.stat)) {
+                       gameState.character[effect.stat] += effect.amount;
+                       if (effect.stat === 'speed' && gameState.character.speed < 1) gameState.character.speed = 1;
+                       if (effect.stat === 'strength' && gameState.character.strength < 0) gameState.character.strength = 0; 
+                       if (['luck', 'combat', 'magic'].includes(effect.stat) && gameState.character[effect.stat] < 0) {
+                           gameState.character[effect.stat] = 0;
+                       }
+                       if (effect.stat === 'maxHealth' && gameState.character.maxHealth < 1) gameState.character.maxHealth = 1;
+                   }
+               });
+           }
+           
+           gameState.character.health = Math.min(gameState.character.health, gameState.character.maxHealth);
+           gameState.character.health = Math.max(0, gameState.character.health); 
+
+           updateCharacterDisplay();
+           updateActiveEffectsDisplay(); 
+       };
+
+       function updateActiveEffectsDisplay() {
+            const effectsListDiv = document.getElementById('activeEffectsList');
+            if (!effectsListDiv) return;
+
+            effectsListDiv.innerHTML = ''; 
+
+            if (gameState.character && gameState.character.activeEffects && gameState.character.activeEffects.length > 0) {
+                gameState.character.activeEffects.forEach(effect => {
+                    const effectDiv = document.createElement('div');
+                    // Make the text slightly smaller for effects
+                    effectDiv.style.fontSize = "0.9em"; 
+                    effectDiv.style.marginTop = "3px"; // Add a little space between effects
+                    effectDiv.textContent = `${effect.description} (${effect.stat}: ${effect.amount > 0 ? '+' : ''}${effect.amount}, Duration: ${effect.duration})`;
+                    effectsListDiv.appendChild(effectDiv);
+                });
+            } else {
+                const noEffectsDiv = document.createElement('div');
+                noEffectsDiv.style.fontSize = "0.9em";
+                noEffectsDiv.textContent = 'None';
+                effectsListDiv.appendChild(noEffectsDiv);
+            }
+        }
+        window.updateActiveEffectsDisplay = updateActiveEffectsDisplay; 
     </script>
 </body>
 </html>
