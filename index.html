@@ -160,6 +160,19 @@
             margin: 0; 
             padding: 0; 
         }
+
+        /* Optional: Add a transition for a smoother collapse/expand */
+        .unified-ui-panel .tab-content {
+            transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+        }
+
+        .unified-ui-panel.content-collapsed .tab-content {
+            display: none !important; /* Ensure it overrides other display styles */
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+            opacity: 0;
+        }
         
         #characterTabContent .stat-row { 
             /* Add specific overrides if necessary */
@@ -551,6 +564,7 @@
                 <button class="tab-button" data-tab="pets">🐾</button> 
                 <button class="tab-button" data-tab="eventLog">📜</button>
                 <button class="tab-button" data-tab="instructions">🗺️</button>
+                <button class="tab-button" data-tab="distance">📏</button>
                 <button class="tab-button" onclick="window.logoutCharacter()">🚪</button>
             </div>
             <div id="characterTabContent" class="tab-content">
@@ -616,6 +630,10 @@
             </div>
             <div id="instructionsTabContent" class="tab-content">
                 <p>Click anywhere on the map to set your destination. Your character will travel there, encountering various events along the way!</p>
+            </div>
+            <div id="distanceTabContent" class="tab-content">
+                <div id="currentJourneyDistanceDisplay">Current Journey: 0 m / 0 m</div>
+                <div id="lifetimeDistanceDisplay">Lifetime Distance: 0 m</div>
             </div>
             <div id="petsTabContent" class="tab-content">
                 <!-- Acquired pets will be listed here by JavaScript -->
@@ -1414,6 +1432,12 @@
             
             document.getElementById('travelInfo').textContent = travelText;
             document.getElementById('progressFill').style.width = progress + '%';
+
+            // New line to update Distance tab:
+            const currentJourneyDisplay = document.getElementById('currentJourneyDistanceDisplay');
+            if (currentJourneyDisplay) {
+                currentJourneyDisplay.textContent = `Current Journey: ${distanceTraveled.toFixed(0)} m / ${totalDistance.toFixed(0)} m`;
+            }
         }
         
         // Called during movement to update effect durations
@@ -1496,6 +1520,7 @@
             addEventLog("🎯 Reached your destination! Click somewhere new to continue exploring.");
             
             saveCharacterData();
+            window.updateDistanceTabDisplay(); 
         }
 
         // Cancel travel
@@ -1512,6 +1537,7 @@
             gameState.journeyData = null; 
             document.getElementById('travelStatus').style.display = 'none';
             addEventLog("🛑 Journey cancelled. Ready for a new adventure!");
+            window.updateDistanceTabDisplay(); 
         };
 
         // Trigger random event
@@ -1797,7 +1823,8 @@
                     activeEffects: [], 
                     woodcutting: 1, 
                     mining: 1,      
-                    fishing: 1      
+                    fishing: 1,
+                    lifetimeDistance: 0 
                 };
                 
                 gameState.character.inventory.push({
@@ -1922,6 +1949,9 @@
                     
                     if (typeof characterData.health === 'undefined') characterData.health = 100;
                     if (typeof characterData.maxHealth === 'undefined') characterData.maxHealth = 100;
+                    if (typeof characterData.lifetimeDistance === 'undefined') {
+                        characterData.lifetimeDistance = 0;
+                    }
                     
                     gameState.character = characterData; 
                     console.log('Character data after defaulting. Health:', gameState.character.health, 'Max Health:', gameState.character.maxHealth);
@@ -2085,6 +2115,7 @@
             updateInventoryDisplay(); 
             window.openTab('character'); 
             window.updatePetDisplay(); 
+            window.updateDistanceTabDisplay(); 
         }
 
         window.damagePlayer = function(amount) {
@@ -2220,7 +2251,29 @@
             tabButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const tabName = this.getAttribute('data-tab');
-                    if (tabName) window.openTab(tabName); 
+                    const unifiedUIPanel = document.getElementById('unifiedUIPanel');
+
+                    if (this.classList.contains('active')) {
+                        // Clicked on the already active tab, toggle collapse
+                        unifiedUIPanel.classList.toggle('content-collapsed');
+                        // If we are collapsing, ensure no tab content is displayed
+                        if (unifiedUIPanel.classList.contains('content-collapsed')) {
+                            const tabContents = document.querySelectorAll('#unifiedUIPanel .tab-content');
+                            tabContents.forEach(content => {
+                                content.style.display = 'none';
+                            });
+                        } else {
+                            // If we are expanding, make sure the active tab's content is displayed
+                            if (tabName) window.openTab(tabName);
+                        }
+                    } else {
+                        // Clicked on a new tab
+                        unifiedUIPanel.classList.remove('content-collapsed'); // Ensure content is expanded
+                        if (tabName) {
+                            window.openTab(tabName); // Switch to the new tab
+                        }
+                        // If it's a button without data-tab (like logout), it will be handled by its own onclick or other listeners.
+                    }
                 });
             });
             showLoginForm(); 
@@ -2249,6 +2302,7 @@
         }
 
         window.openTab = function(tabBaseName) {
+           const unifiedUIPanel = document.getElementById('unifiedUIPanel');
            const tabContents = document.querySelectorAll('#unifiedUIPanel .tab-content'); 
            tabContents.forEach(content => {
                content.style.display = 'none';
@@ -2261,7 +2315,9 @@
 
            const selectedTabContentId = tabBaseName + "TabContent";
            const selectedTabContent = document.getElementById(selectedTabContentId);
-           if (selectedTabContent) {
+           
+           // Only display content if the panel is not collapsed
+           if (selectedTabContent && !unifiedUIPanel.classList.contains('content-collapsed')) {
                selectedTabContent.style.display = 'block';
            }
 
@@ -2272,7 +2328,29 @@
            if (tabBaseName === 'character') {
                 updateActiveEffectsDisplay(); 
            }
+           if (tabBaseName === 'distance') { 
+               window.updateDistanceTabDisplay();
+           }
        }
+
+       function updateDistanceTabDisplay() {
+            const currentJourneyDisplay = document.getElementById('currentJourneyDistanceDisplay');
+            const lifetimeDisplay = document.getElementById('lifetimeDistanceDisplay');
+
+            if (currentJourneyDisplay) {
+                if (gameState.isMoving && gameState.journeyData) {
+                    currentJourneyDisplay.textContent = `Current Journey: ${gameState.journeyData.distanceTraveled.toFixed(0)} m / ${gameState.journeyData.totalDistance.toFixed(0)} m`;
+                } else {
+                    currentJourneyDisplay.textContent = "Current Journey: N/A";
+                }
+            }
+
+            if (lifetimeDisplay && gameState.character) {
+                const lifetimeDist = gameState.character.lifetimeDistance || 0;
+                lifetimeDisplay.textContent = `Lifetime Distance: ${lifetimeDist.toFixed(0)} m`;
+            }
+        }
+        window.updateDistanceTabDisplay = updateDistanceTabDisplay;
 
        window.updatePetDisplay = function() {
            const petsContent = document.getElementById('petsTabContent');
