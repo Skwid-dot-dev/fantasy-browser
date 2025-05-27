@@ -1,11 +1,14 @@
 // main.js
 import { loadCharacterHandler, showRegisterForm, showLoginForm } from './auth.js';
 
-// Bind handlers to buttons once DOM is loaded
-window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('loginButton').addEventListener('click', loadCharacterHandler);
-    document.getElementById('switchToRegisterButton').addEventListener('click', showRegisterForm);
-    document.getElementById('backToLoginButton').addEventListener('click', showLoginForm);
+window.gameState = {
+  currentUser: null,
+  character: null,
+  map: null
+};
 
-    // If needed, bind other UI events here
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginButton').addEventListener('click', loadCharacterHandler);
+  document.getElementById('switchToRegisterButton').addEventListener('click', showRegisterForm);
+  document.getElementById('backToLoginButton').addEventListener('click', showLoginForm);
 });
