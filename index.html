@@ -814,6 +814,31 @@
             'minotaur': 'images/minotaur.png'
         };
 
+        // Pet Item Definitions (for reference)
+        /*
+        const PET_SWORD_TEMPLATE = {
+            id: '', // Will be dynamically generated when an instance is created
+            name: "Pet Training Sword",
+            type: "pet_equipment_weapon", // Type to identify it as pet weapon
+            description: "A small, sturdy sword suitable for a pet. Grants +3 Combat to the pet.",
+            effects: { combat: 3 }, // Stat bonuses for the pet
+            usable: false, // Not usable by the player directly from inventory
+            equipableToPet: true, // Custom flag to identify it for pet equipping logic
+            quantity: 1
+        };
+
+        const PET_BOOTS_TEMPLATE = {
+            id: '', // Will be dynamically generated
+            name: "Sturdy Pet Boots",
+            type: "pet_equipment_armor", // Type to identify it as pet armor/accessory
+            description: "Durable little boots for a pet. Grants +2 Speed to the pet.",
+            effects: { speed: 2 }, // Stat bonuses for the pet
+            usable: false, // Not usable by the player
+            equipableToPet: true, // Custom flag
+            quantity: 1
+        };
+        */
+
         let gameState = {
             currentUser: null,
             character: null,
@@ -963,7 +988,8 @@
                                 type: randomType,
                                 name: petName,
                                 variation: variation,
-                                stats: { luck: 0, strength: 0, speed: 0 }
+                                stats: { luck: 0, strength: 0, speed: 0 },
+                                equippedItem: null 
                             };
 
                             const statKeys = ["luck", "strength", "speed"];
@@ -1294,6 +1320,64 @@
                         success: "You decide not to risk it."
                     }
                 ]
+            },
+            {
+                title: "Armorer's Lost Tools",
+                description: "You stumble upon a satchel containing fine tools, clearly belonging to a skilled armorer. There's a note with a local address.",
+                choices: [
+                    {
+                        text: "Return the tools to the armorer.",
+                        stat: 'luck', 
+                        success: "The grateful armorer thanks you profusely and offers you a reward for your honesty. You receive a Pet Sword!",
+                        fail: "You couldn't find the armorer. The address seems to be old and the shop is long gone.",
+                        item: {
+                            id: '', // Will be set in handleEventChoice if not set here, but good practice to define
+                            name: "Armorer's Pet Sword",
+                            type: "pet_equipment_weapon",
+                            description: "A finely crafted small sword, a gift from a grateful armorer. +3 Combat for your pet.",
+                            effects: { combat: 3 },
+                            usable: false,
+                            equipableToPet: true,
+                            quantity: 1
+                        }
+                    },
+                    {
+                        text: "Keep the tools. They look valuable.",
+                        stat: null,
+                        success: "You keep the tools. They might fetch a good price, or perhaps you'll find a use for them. (You gain 25 gold).",
+                        reward: 25,
+                        penalty: 0
+                    }
+                ]
+            },
+            {
+                title: "Fleetfoot Courier's Dilemma",
+                description: "A panicked courier flags you down. 'My pack burst open! I think I lost a small, specially ordered pair of pet boots! Can you help me search?'",
+                choices: [
+                    {
+                        text: "Help search for the boots (Luck 6+).",
+                        stat: 'luck',
+                        success: "After a thorough search, you spot the tiny boots near a creek! The courier is overjoyed and lets you keep them as thanks.",
+                        fail: "Despite your best efforts, the boots are nowhere to be found. The courier thanks you for trying.",
+                        item: {
+                            id: '', // Will be set in handleEventChoice
+                            name: "Courier's Pet Boots",
+                            type: "pet_equipment_armor",
+                            description: "Durable little boots, found for a grateful courier. +2 Speed for your pet.",
+                            effects: { speed: 2 },
+                            usable: false,
+                            equipableToPet: true,
+                            quantity: 1
+                        }
+                    },
+                    {
+                        text: "Sorry, I'm too busy to help.",
+                        stat: null,
+                        success: "You continue on your way, leaving the flustered courier to their search.",
+                        reward: 0,
+                        penalty: 0
+                    }
+                ]
             }
         ];
 
@@ -1381,7 +1465,7 @@
             if (gameState.isMoving) return;
             
             gameState.isMoving = true;
-            document.getElementById('travelStatus').style.display = 'block';
+            // document.getElementById('travelStatus').style.display = 'block';
             
             gameState.journeyData = {
                 startPosition: [...gameState.currentPosition],
@@ -1516,7 +1600,7 @@
                 gameState.destinationMarker = null;
             }
             
-            document.getElementById('travelStatus').style.display = 'none';
+            // document.getElementById('travelStatus').style.display = 'none';
             addEventLog("🎯 Reached your destination! Click somewhere new to continue exploring.");
             
             saveCharacterData();
@@ -1535,7 +1619,7 @@
             
             gameState.destination = null;
             gameState.journeyData = null; 
-            document.getElementById('travelStatus').style.display = 'none';
+            // document.getElementById('travelStatus').style.display = 'none';
             addEventLog("🛑 Journey cancelled. Ready for a new adventure!");
             window.updateDistanceTabDisplay(); 
         };
@@ -1939,6 +2023,7 @@
                     else {
                         characterData.pets.forEach(pet => {
                             if (pet.variation === undefined) pet.variation = null;
+                            if (pet.equippedItem === undefined) pet.equippedItem = null; 
                         });
                     }
                     if (characterData.woodcutting === undefined) characterData.woodcutting = 1;
@@ -2171,9 +2256,29 @@
                         useButton.style.marginLeft = '10px'; 
                         useButton.style.padding = '3px 8px'; 
                         useButton.style.fontSize = '0.9em';
+                        const useButton = document.createElement('button');
+                        useButton.style.marginLeft = '10px'; 
+                        useButton.style.padding = '3px 8px'; 
+                        useButton.style.fontSize = '0.9em';
                         useButton.className = 'choice-btn'; 
-                        useButton.onclick = function() { window.useItem(item.id); }; 
+
+                        if (item.equipableToPet === true) {
+                            useButton.textContent = 'Equip to Pet';
+                            useButton.onclick = function() { window.equipItemToPet(item.id); };
+                        } else {
+                            useButton.textContent = 'Use';
+                            useButton.onclick = function() { window.useItem(item.id); };
+                        }
                         itemDiv.appendChild(useButton);
+                    } else if (item.equipableToPet === true) { // Item is equipable but not usable by player
+                        const equipButton = document.createElement('button');
+                        equipButton.textContent = 'Equip to Pet';
+                        equipButton.style.marginLeft = '10px';
+                        equipButton.style.padding = '3px 8px';
+                        equipButton.style.fontSize = '0.9em';
+                        equipButton.className = 'choice-btn';
+                        equipButton.onclick = function() { window.equipItemToPet(item.id); };
+                        itemDiv.appendChild(equipButton);
                     }
                     inventoryContent.appendChild(itemDiv);
                 });
@@ -2239,6 +2344,54 @@
             updateInventoryDisplay(); 
             window.applyCharacterStatModifiers(); 
             saveCharacterData(); 
+        };
+
+        window.equipItemToPet = function(itemId) {
+            if (!gameState.character || !gameState.character.inventory) {
+                console.error("equipItemToPet: Character or inventory not found.");
+                addEventLog("Error: Character data or inventory missing.");
+                return;
+            }
+
+            const itemIndex = gameState.character.inventory.findIndex(invItem => invItem && invItem.id === itemId);
+            if (itemIndex === -1) {
+                console.error("equipItemToPet: Item not found in inventory with ID:", itemId);
+                addEventLog("Error: Could not find that item in your inventory.");
+                return;
+            }
+            const item = gameState.character.inventory[itemIndex];
+
+            if (!gameState.character.activePetId) {
+                addEventLog("Please select an active pet first to equip an item.");
+                return;
+            }
+
+            const activePet = gameState.character.pets.find(p => p.id === gameState.character.activePetId);
+            if (!activePet) {
+                console.error("equipItemToPet: Active pet not found with ID:", gameState.character.activePetId);
+                addEventLog("Active pet not found. Cannot equip item.");
+                return;
+            }
+
+            // Handle Currently Equipped Item
+            if (activePet.equippedItem) {
+                const previouslyEquippedItem = activePet.equippedItem;
+                gameState.character.inventory.push(previouslyEquippedItem); // Add it back to inventory
+                addEventLog(`Unequipped ${previouslyEquippedItem.name} from ${activePet.name} and returned it to inventory.`);
+                activePet.equippedItem = null; // Clear old item from pet
+            }
+
+            // Equip New Item
+            activePet.equippedItem = item;
+            gameState.character.inventory.splice(itemIndex, 1); // Remove item from inventory
+
+            addEventLog(`Equipped ${item.name} to ${activePet.name}.`);
+
+            // Update Game State
+            window.applyCharacterStatModifiers(); // Will need updates for pet stats
+            updateInventoryDisplay();
+            window.updatePetDisplay(); // Will need updates to show equipped item
+            saveCharacterData();
         };
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -2417,6 +2570,28 @@
                        petItem.style.backgroundColor = ''; 
                    }
 
+                   // Display equipped item and unequip button
+                   if (pet.equippedItem && pet.equippedItem.name) {
+                       const equippedItemDiv = document.createElement('div');
+                       equippedItemDiv.style.fontSize = '0.85em';
+                       equippedItemDiv.style.color = '#bdc3c7'; // Lighter color for sub-info
+                       equippedItemDiv.style.marginLeft = '25px'; // Indent under pet name
+                       equippedItemDiv.textContent = `Equipped: ${pet.equippedItem.name}`;
+                       petItem.appendChild(equippedItemDiv);
+
+                       const unequipButton = document.createElement('button');
+                       unequipButton.textContent = 'Unequip';
+                       unequipButton.style.fontSize = '0.8em';
+                       unequipButton.style.padding = '2px 5px';
+                       unequipButton.style.marginLeft = '10px';
+                       unequipButton.className = 'choice-btn'; // Re-use existing button style
+                       unequipButton.onclick = function(event) {
+                           event.stopPropagation(); // Prevent pet selection click when clicking unequip
+                           window.unequipItemFromPet(pet.id);
+                       };
+                       equippedItemDiv.appendChild(unequipButton); // Append button next to item name
+                   }
+
                    petItem.addEventListener('click', () => {
                        if (gameState.character) {
                            if (gameState.character.activePetId === pet.id) {
@@ -2437,6 +2612,37 @@
                petsContent.innerHTML = '<p>No loyal companions by your side... yet!</p>';
            }
        }
+
+       window.unequipItemFromPet = function(petId) {
+            if (!gameState.character || !gameState.character.pets || !gameState.character.inventory) {
+                console.error("unequipItemFromPet: Critical data missing (character, pets, or inventory).");
+                addEventLog("Error: Critical game data missing.");
+                return;
+            }
+
+            const pet = gameState.character.pets.find(p => p.id === petId);
+            if (!pet) {
+                console.error("unequipItemFromPet: Pet not found with ID:", petId);
+                addEventLog("Error: Could not find the specified pet.");
+                return;
+            }
+
+            if (!pet.equippedItem) {
+                addEventLog(`${pet.name} has no item equipped.`);
+                return;
+            }
+
+            const itemToReturn = pet.equippedItem;
+            gameState.character.inventory.push(itemToReturn);
+            addEventLog(`Unequipped ${itemToReturn.name} from ${pet.name}. Item returned to inventory.`);
+
+            pet.equippedItem = null;
+
+            window.applyCharacterStatModifiers();
+            updateInventoryDisplay();
+            window.updatePetDisplay();
+            saveCharacterData();
+        };
 
        async function handlePasswordReset() {
             document.getElementById('authError').textContent = '';
@@ -2472,6 +2678,17 @@
                     gameState.character.luck += (activePet.stats.luck || 0);
                     gameState.character.strength += (activePet.stats.strength || 0);
                     gameState.character.speed += (activePet.stats.speed || 0);
+
+                    // Apply stats from equipped item
+                    if (activePet.equippedItem && activePet.equippedItem.effects) {
+                        console.log(`Applying stats from ${activePet.name}'s equipped item: ${activePet.equippedItem.name}`); // Optional: for debugging
+                        for (const statEffect in activePet.equippedItem.effects) {
+                            if (gameState.character.hasOwnProperty(statEffect)) {
+                                gameState.character[statEffect] += activePet.equippedItem.effects[statEffect];
+                                console.log(` > ${statEffect} increased by ${activePet.equippedItem.effects[statEffect]}`); // Optional
+                            }
+                        }
+                    }
                 }
             }
        };
