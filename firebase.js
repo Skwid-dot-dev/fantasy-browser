@@ -19,34 +19,26 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const analytics = getAnalytics(app); // Export if needed elsewhere, or remove if not used
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const firebaseAuthFunctions = {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    sendEmailVerification,
-    sendPasswordResetEmail,
-    setPersistence,
-    Auth: {
-        Persistence: {
-            LOCAL: browserLocalPersistence,
-            SESSION: browserSessionPersistence
-        }
-    }
-};
-
+// Custom Firebase interaction functions
 const firebase = {
     saveCharacter: async (characterData) => {
-        if (!auth.currentUser) throw new Error("Not logged in");
+        // Assumes auth.currentUser is available and set by the calling context (e.g., after login)
+        // This could be improved by passing UID directly if auth instance isn't managed here.
+        if (!auth.currentUser) throw new Error("User not authenticated for saveCharacter.");
         const uid = auth.currentUser.uid;
         const userDocRef = doc(db, "characters", uid);
         await setDoc(userDocRef, characterData);
     },
     loadCharacter: async () => {
-        if (!auth.currentUser) return null;
+        // Assumes auth.currentUser is available
+        if (!auth.currentUser) {
+            console.warn("User not authenticated for loadCharacter.");
+            return null;
+        }
         const uid = auth.currentUser.uid;
         const userDocRef = doc(db, "characters", uid);
         const docSnap = await getDoc(userDocRef);
@@ -54,4 +46,20 @@ const firebase = {
     }
 };
 
-export { auth, firebaseAuthFunctions, firebase };
+// Export the initialized services and specific functions
+export { 
+    auth, 
+    db,
+    // Firebase Auth functions
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    sendEmailVerification, 
+    sendPasswordResetEmail, 
+    setPersistence, 
+    // Firebase Auth persistence types
+    browserLocalPersistence, 
+    browserSessionPersistence,
+    // Custom character functions
+    firebase 
+};
